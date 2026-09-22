@@ -1,0 +1,16 @@
+{
+  "name": "state-matrix",
+  "owner": { "name": "obraztsov" },
+  "metadata": { "description": "Матрица состояний: все комбинации входов и их исходы" },
+  "plugins": [
+    {
+      "name": "state-matrix",
+      "source": "./",
+      "description": "Поднимает все состояния системы по коду или спеке, считает достижимость и показывает комбинации, о которых никто не подумал",
+      "version": "1.0.0",
+      "category": "testing",
+      "tags": ["testing", "coverage", "state-machine", "spec-review"],
+      "strict": true
+    }
+  ]
+}
