@@ -1,3 +1,4 @@
 .states/
+runs/
 __pycache__/
 *.pyc
