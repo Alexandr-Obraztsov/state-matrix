@@ -28,14 +28,14 @@ class T(unittest.TestCase):
                                          os.path.basename(m))
                     self.assertFalse(sl["advice"]["over"])
 
-    def test_report_prints_all_sections(self):
-        with tempfile.TemporaryDirectory() as d:
-            out = os.path.join(d, "r.json")
-            build(EXAMPLES[0], out)
-            md = subprocess.run([sys.executable, os.path.join(SC, "report_md.py"), out],
-                                capture_output=True, text=True).stdout
-            for sec in ("## Параметры", "## Правила", "## Состояния системы", "## Матрица"):
-                self.assertIn(sec, md)
+    def test_build_prints_matrix_to_chat(self):
+        """Отчёта-файла нет: sm build печатает всё в поток, агент отдаёт это в чат."""
+        spec = os.path.join(R, "examples", "Checkout.states.json")
+        r = subprocess.run([sys.executable, os.path.join(SC, "sm.py"), "build", spec,
+                            "--root", R], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        for sec in ("СОСТОЯНИЯ", "МАТРИЦА", "ВНЕ МАТРИЦЫ"):
+            self.assertIn(sec, r.stdout)
 
     def test_no_parser_left(self):
         self.assertFalse(os.path.exists(os.path.join(SC, "extract.py")),

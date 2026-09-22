@@ -25,8 +25,8 @@ class T(unittest.TestCase):
 
     def test_skill_mentions_pipeline_order(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"), encoding="utf-8").read()
-        for step in ("sm_catalog", "sm_param_add", "sm_rule_add",
-                     "sm_state_add", "sm_build"):
+        for step in ("sm_init", "sm_param_add", "sm_params", "sm_param_values",
+                     "sm_state_add", "sm_states", "sm_rule_add", "sm_build"):
             self.assertIn(step, s)
 
     def test_skill_states_the_ceiling(self):
@@ -39,8 +39,25 @@ class T(unittest.TestCase):
             self.assertTrue(os.path.exists(p), c)
             self.assertTrue(open(p, encoding="utf-8").read().startswith("---"), c)
 
+    def test_skill_states_the_gates(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        for g in ("Ворота 1", "Ворота 2", "Ворота 3", "Ворота 4"):
+            self.assertIn(g, s)
+
+    def test_skill_forbids_inventing(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertIn("Ничего не выдумывать", s)
+
+    def test_no_catalog_left(self):
+        self.assertFalse(os.path.exists(os.path.join(R, "catalog")),
+                         "корзина параметров удалена")
+        self.assertFalse(os.path.exists(os.path.join(R, "scripts", "report_md.py")),
+                         "md-отчёта больше нет: всё в чате")
+
     def test_references_exist(self):
-        for f in ("catalog.md", "findings.md"):
+        for f in ("findings.md",):
             self.assertTrue(os.path.exists(
                 os.path.join(R, "skills", "state-matrix", "references", f)), f)
 

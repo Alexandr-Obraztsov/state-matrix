@@ -18,59 +18,48 @@ class T(unittest.TestCase):
             store.save(p, model)
             return validate.check(p)
 
-    def _with_catalog(self, d, params):
-        store.save(os.path.join(d, "catalog.json"),
-                   [{"id": "money_amount", "title": "Сумма", "desc": "…",
-                     "matches": {"names": ["amount"], "types": ["number"]},
-                     "questions": [{"id": "unit", "ask": "единицы?",
-                                    "options": ["в спеке не сказано"]}],
-                     "values": ["zero"]}])
-        p = os.path.join(d, "m.states.json")
-        store.save(p, m(params=params))
-        return validate.check(p)
+    def test_param_without_from_is_error(self):
+        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
+                                          "all_values": ["a"]}}))
+        self.assertTrue(any("from" in z for z in e), e)
 
-    def test_question_ignored_entirely_is_error(self):
-        """Вопрос, которого вообще нет в answers, — признак обхода тулов."""
-        with tempfile.TemporaryDirectory() as d:
-            e, w = self._with_catalog(d, {"amount": {
-                "type": "number", "catalog": "money_amount", "values": ["zero"],
-                "all_values": ["zero"], "from": "a.ts:1"}})
-        self.assertTrue(any("не учтён" in x for x in e), e)
+    def test_param_without_values_is_error(self):
+        e, w = self.check(m(params={"x": {"type": "enum", "desc": "d", "from": "a.md:1"}}))
+        self.assertTrue(any("нет values" in z for z in e), e)
 
-    def test_not_found_answer_is_warning_not_error(self):
-        """«Не выяснено» — замечание в отчёт, а не отказ."""
-        with tempfile.TemporaryDirectory() as d:
-            e, w = self._with_catalog(d, {"amount": {
-                "type": "number", "catalog": "money_amount", "values": ["zero"],
-                "all_values": ["zero"], "from": "a.ts:1",
-                "answers": {"unit": "не выяснено"}}})
-        self.assertEqual(e, [])
-        self.assertTrue(any("не выяснено" in x for x in w), w)
+    def test_state_without_evidence_is_error(self):
+        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
+                                          "all_values": ["a"], "from": "a.md:1"}},
+                            states=[{"name": "S", "when": {"x": "a"}, "desc": "d"}]))
+        self.assertTrue(any("evidence" in z for z in e), e)
 
-    def test_error_names_the_bypass(self):
-        with tempfile.TemporaryDirectory() as d:
-            e, w = self._with_catalog(d, {"amount": {
-                "type": "number", "catalog": "money_amount", "values": ["zero"],
-                "all_values": ["zero"], "from": "a.ts:1"}})
-        self.assertTrue(any("обход" in x for x in e), e)
+    def test_state_without_desc_is_error(self):
+        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
+                                          "all_values": ["a"], "from": "a.md:1"}},
+                            states=[{"name": "S", "when": {"x": "a"},
+                                     "evidence": "a.md:1"}]))
+        self.assertTrue(any("desc" in z for z in e), e)
 
-    def test_param_with_all_answers_ok(self):
-        with tempfile.TemporaryDirectory() as d:
-            e, w = self._with_catalog(d, {"amount": {
-                "type": "number", "catalog": "money_amount", "values": ["zero"],
-                "all_values": ["zero"], "from": "a.ts:1",
-                "answers": {"unit": "копейки — §3"}}})
-        self.assertEqual(e, [])
-        self.assertEqual(w, [])
+    def test_catchall_state_must_be_last(self):
+        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
+                                          "all_values": ["a"], "from": "a.md:1"}},
+                            states=[{"name": "Все", "when": {}, "desc": "d",
+                                     "evidence": "a.md:1"},
+                                    {"name": "Частный", "when": {"x": "a"}, "desc": "d",
+                                     "evidence": "a.md:1"}]))
+        self.assertTrue(any("не последнее" in z for z in e), e)
 
-    def test_param_without_catalog_still_needs_from(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"], "answers": {}}}))
-        self.assertTrue(any("from" in x for x in e))
+    def test_duplicate_state_name_is_error(self):
+        st = {"name": "S", "when": {"x": "a"}, "desc": "d", "evidence": "a.md:1"}
+        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
+                                          "all_values": ["a"], "from": "a.md:1"}},
+                            states=[st, dict(st)]))
+        self.assertTrue(any("повторяется" in z for z in e), e)
 
-    def test_unknown_catalog_id_is_error(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "catalog": "нет_такой",
-                                          "values": ["a"], "from": "a.ts:1", "answers": {}}}))
-        self.assertTrue(any("нет_такой" in x for x in e), e)
+    def test_no_states_is_warning(self):
+        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
+                                          "all_values": ["a"], "from": "a.md:1"}}))
+        self.assertTrue(any("состояния" in z for z in w), w)
 
 
 class Grouping(unittest.TestCase):

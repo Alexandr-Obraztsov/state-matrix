@@ -5,7 +5,6 @@
     "cart": {
       "type": "endpoint",
       "desc": "Ответ на запрос корзины",
-      "catalog": "http_endpoint",
       "all_values": [
         "pending",
         "ok",
@@ -19,28 +18,16 @@
         "ok_empty",
         "error"
       ],
-      "grouping": "error_network и error_server спека §2 описывает одинаково — заглушка с кнопкой «Повторить», поэтому в матрице один класс error",
+      "grouping": "§2 описывает обе ошибки одинаково — заглушка с кнопкой «Повторить»",
       "special": [
-        "status_422",
         "timeout",
         "malformed"
       ],
-      "from": "examples/checkout-spec.md:§2 — GET /api/cart",
-      "answers": {
-        "codes": "200, 422 при превышении лимита; остальные не описаны — спросил у пользователя",
-        "empty": "да — §2 описывает «Корзина пуста»",
-        "partial": "в спеке не сказано",
-        "timeout": "в спеке не сказано",
-        "auth": "в спеке не сказано",
-        "late": "в спеке не сказано",
-        "order": "единственный запрос",
-        "retry": "да — §2, кнопка «Повторить»"
-      }
+      "from": "examples/checkout-spec.md:§2"
     },
     "amount": {
       "type": "number",
       "desc": "Сумма заказа в копейках",
-      "catalog": "money_amount",
       "all_values": [
         "zero",
         "min_unit",
@@ -54,22 +41,13 @@
         "over_max"
       ],
       "special": [
-        "negative",
-        "fractional_unit"
+        "negative"
       ],
-      "from": "examples/checkout-spec.md:§3",
-      "answers": {
-        "unit": "копейки — §3",
-        "zero": "да, бесплатный заказ — §3",
-        "negative": "в спеке не сказано",
-        "max": "999999900 копеек — §3",
-        "rounding": "в спеке не сказано"
-      }
+      "from": "examples/checkout-spec.md:§3"
     },
     "auth": {
       "type": "enum",
       "desc": "Авторизован ли пользователь",
-      "catalog": "auth_role",
       "all_values": [
         "guest",
         "user"
@@ -78,19 +56,26 @@
         "guest",
         "user"
       ],
-      "from": "examples/checkout-spec.md:§4",
-      "answers": {
-        "roles": "гость и авторизованный — §4",
-        "anon": "да — §4",
-        "owner": "в спеке не сказано",
-        "denied": "в спеке не сказано",
-        "mid": "в спеке не сказано"
-      }
+      "from": "examples/checkout-spec.md:§4"
+    },
+    "promo": {
+      "type": "enum",
+      "desc": "Состояние промокода",
+      "all_values": [
+        "absent",
+        "valid",
+        "expired"
+      ],
+      "values": [
+        "absent",
+        "valid",
+        "expired"
+      ],
+      "from": "examples/checkout-spec.md:§4"
     },
     "viewport": {
       "type": "enum",
       "desc": "Брейкпоинт, фиксируется при загрузке",
-      "catalog": "viewport",
       "all_values": [
         "mobile",
         "tablet",
@@ -102,40 +87,12 @@
         "desktop"
       ],
       "from": "examples/checkout-spec.md:§1",
-      "env": true,
-      "answers": {
-        "points": "mobile/tablet/desktop — §1",
-        "runtime": "нет, §1 прямо говорит",
-        "behavior": "в спеке не сказано"
-      }
-    },
-    "promo": {
-      "type": "enum",
-      "desc": "Состояние промокода",
-      "catalog": "promo_code",
-      "all_values": [
-        "absent",
-        "valid",
-        "expired"
-      ],
-      "values": [
-        "absent",
-        "valid",
-        "expired"
-      ],
-      "special": [
-        "unknown_code"
-      ],
-      "from": "examples/checkout-spec.md:§4",
-      "answers": {
-        "list": "нет / валидный / истёкший — §4",
-        "who": "только авторизованным — §4",
-        "expired": "перечёркивается — §4",
-        "recalc": "в спеке не сказано"
-      }
+      "env": true
     }
   },
-  "excluded": {},
+  "excluded": {
+    "кнопка Повторить": "элемент интерфейса, не вход системы"
+  },
   "constraints": [
     {
       "id": "r1",
@@ -164,7 +121,8 @@
       },
       "irrelevant": [
         "amount",
-        "promo"
+        "promo",
+        "auth"
       ]
     },
     {
@@ -187,24 +145,24 @@
       "when": {
         "cart": "pending"
       },
-      "evidence": "examples/checkout-spec.md:§5",
-      "desc": "Скелетон формы"
+      "desc": "Скелетон формы, кнопка оплаты скрыта",
+      "evidence": "examples/checkout-spec.md:§5"
     },
     {
       "name": "Ошибка сети",
       "when": {
         "cart": "error"
       },
-      "evidence": "examples/checkout-spec.md:§5",
-      "desc": "Заглушка с кнопкой «Повторить»"
+      "desc": "Заглушка с кнопкой «Повторить», формы нет",
+      "evidence": "examples/checkout-spec.md:§5"
     },
     {
       "name": "Пустая корзина",
       "when": {
         "cart": "ok_empty"
       },
-      "evidence": "examples/checkout-spec.md:§5",
-      "desc": "«Корзина пуста», заказ оформить нельзя"
+      "desc": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
+      "evidence": "examples/checkout-spec.md:§5"
     },
     {
       "name": "Бесплатный заказ",
@@ -212,16 +170,25 @@
         "cart": "ok",
         "amount": "zero"
       },
-      "evidence": "examples/checkout-spec.md:§5",
-      "desc": "Оплата не запрашивается"
+      "desc": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
+      "evidence": "examples/checkout-spec.md:§5"
+    },
+    {
+      "name": "Промокод истёк",
+      "when": {
+        "cart": "ok",
+        "promo": "expired"
+      },
+      "desc": "Промокод перечёркнут, сумма пересчитана обратно",
+      "evidence": "examples/checkout-spec.md:§4"
     },
     {
       "name": "Оформление",
       "when": {
         "cart": "ok"
       },
-      "evidence": "examples/checkout-spec.md:§5",
-      "desc": "Обычный случай"
+      "desc": "Форма оплаты, поле промокода видно только авторизованным",
+      "evidence": "examples/checkout-spec.md:§5"
     }
   ]
 }

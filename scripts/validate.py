@@ -4,18 +4,6 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import store
 
-def semantics(model_path):
-    """Дефолтная корзина плюс проектная; проектная имеет приоритет."""
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cat = {c["id"]: c for c in store.load(os.path.join(root, "catalog", "default.json"))}
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import sm
-    d = os.path.dirname(model_path) or "."
-    for cand in (os.path.join(d, "..", "catalog.json"), os.path.join(d, "catalog.json")):
-        for c in (store.load(cand) or []):
-            cat[c["id"]] = sm.merge_entry(cat[c["id"]], c) if c["id"] in cat else c
-    return cat
-
 
 def check(path):
     m = store.load(path)
@@ -23,12 +11,23 @@ def check(path):
         return [f"{path}: это не модель (ожидался объект, получен {type(m).__name__})"], []
     errs, warns = [], []
     P = m.get("params") or {}
-    CAT = semantics(path)
     if not m.get("system"): errs.append("нет поля system")
     if not P: errs.append("нет параметров")
 
+    def known(name, val, where):
+        """Имя параметра существует и значение объявлено у него."""
+        if name not in P:
+            errs.append(f"{where}: неизвестный параметр «{name}»")
+            return
+        for v in (val if isinstance(val, list) else [val]):
+            if isinstance(v, str) and v.startswith("!"):
+                continue
+            if v not in [str(y) for y in (P[name].get("values") or [])]:
+                errs.append(f"{where}: значение «{v}» отсутствует у {name}")
+
     for n, p in P.items():
-        if not p.get("values"): errs.append(f"{n}: нет values")
+        if not p.get("values"):
+            errs.append(f"{n}: нет values — параметр объявлен, но значения не заданы")
         if not p.get("from"):   errs.append(f"{n}: нет from — источник значений не указан")
         av = p.get("all_values")
         if not av:
@@ -38,31 +37,6 @@ def check(path):
             if extra and not p.get("grouping"):
                 errs.append(f"{n}: {len(av)} значений свёрнуто в {len(p['values'])} "
                             f"классов без объяснения (нет grouping)")
-        cid = p.get("catalog")
-        if cid:
-            if cid not in CAT:
-                errs.append(f"{n}: семантика «{cid}» отсутствует в корзине")
-            else:
-                ans = p.get("answers") or {}
-                for q in CAT[cid]["questions"]:
-                    if q["id"] not in ans:
-                        errs.append(f"{n}: вопрос «{q['id']}» типа {cid} вообще не учтён"
-                                    " — параметр добавлен в обход sm.py")
-                    elif str(ans[q["id"]]).lower() in ("не выяснено", "неизвестно"):
-                        warns.append(f"{n}: «{q['id']}» не выяснено"
-                                     f" — {q['ask']}")
-        if p.get("env") and (m.get("transitions") or []):
-            for t in m["transitions"]:
-                if n in (t.get("set") or {}):
-                    errs.append(f"{n}: помечен env, но меняется переходом «{t['event']}»")
-
-    def known(name, val, where):
-        if name not in P: errs.append(f"{where}: неизвестный параметр «{name}»"); return
-        for v in (val if isinstance(val, list) else [val]):
-            if isinstance(v, str) and v.startswith("!"): continue
-            if v not in P[name]["values"]:
-                errs.append(f"{where}: значение «{v}» отсутствует в {name}.values")
-
     for i, c in enumerate(m.get("constraints") or []):
         w = f"constraints[{i}]"
         if not c.get("evidence"): errs.append(f"{w}: нет evidence")
@@ -92,10 +66,25 @@ def check(path):
     elif m.get("transitions"):
         errs.append("есть transitions, но нет initial — достижимость не посчитать")
 
-    for i, o in enumerate(m.get("outcomes") or []):
-        w = f"outcomes[{i}]"
-        if not o.get("behavior"): errs.append(f"{w}: нет behavior")
-        for k, v in (o.get("match") or {}).items(): known(k, v, w + ".match")
+    states = m.get("states") or []
+    if not states:
+        warns.append("нет ни одного состояния — матрица будет без исходов")
+    seen_names = set()
+    for i, o in enumerate(states):
+        w = f"states[{i}] «{o.get('name','?')}»"
+        if not o.get("name"):     errs.append(f"{w}: нет name")
+        if not o.get("desc"):     errs.append(f"{w}: нет desc — что видит пользователь")
+        if not o.get("evidence"): errs.append(f"{w}: нет evidence")
+        if o.get("name") in seen_names:
+            errs.append(f"{w}: имя состояния повторяется")
+        seen_names.add(o.get("name"))
+        for k, v in (o.get("when") or {}).items():
+            known(k, v, w + ".when")
+    # запасное состояние без условия обязано быть последним
+    for i, o in enumerate(states[:-1]):
+        if not (o.get("when") or {}):
+            errs.append(f"states[{i}] «{o.get('name')}»: условия нет, но оно не последнее "
+                        "— перекроет все состояния ниже")
     return errs, warns
 
 

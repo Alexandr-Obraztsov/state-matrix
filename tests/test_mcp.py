@@ -34,47 +34,38 @@ class T(unittest.TestCase):
         tools = out[1]["result"]["tools"]
         self.assertGreaterEqual(len(tools), 15)
         names = {t["name"] for t in tools}
-        for n in ("sm_init", "sm_catalog", "sm_param_add", "sm_rule_add",
-                  "sm_state_add", "sm_build"):
+        for n in ("sm_init", "sm_param_add", "sm_param_values", "sm_params",
+                  "sm_state_add", "sm_states", "sm_rule_add", "sm_build"):
             self.assertIn(n, names)
         for t in tools:
             self.assertIn("inputSchema", t)
             self.assertTrue(t["description"])
             self.assertNotIn("_fn", t, "внутренние поля не должны уезжать клиенту")
 
-    def test_param_without_catalog_is_error(self):
+    def test_param_without_source_is_error(self):
         with tempfile.TemporaryDirectory() as d:
             m = os.path.join(d, "X.states.json")
             out, _ = talk([INIT,
                            call("sm_init", {"model": m, "system": "X",
                                             "source": "spec.md"}, 2),
-                           call("sm_param_add", {"model": m, "name": "n", "type": "number",
-                                                 "values": ["a"], "all_values": ["a"],
-                                                 "from": "a.ts:1", "answers": []}, 3)])
+                           call("sm_param_add", {"model": m, "name": "n",
+                                                 "type": "number"}, 3)])
             res = out[2]["result"]
             self.assertTrue(res["isError"])
-            self.assertIn("корзина", res["content"][0]["text"])
+            self.assertIn("--from", res["content"][0]["text"])
 
     def test_full_happy_path(self):
         with tempfile.TemporaryDirectory() as d:
             m = os.path.join(d, "X.states.json")
-            ans = ["unit=копейки"]
             out, err = talk([INIT,
                              call("sm_init", {"model": m, "system": "X",
                                               "source": "spec.md"}, 2),
-                             call("sm_catalog_new", {
-                                 "model": m, "id": "money", "title": "Сумма",
-                                 "desc": "Денежная сумма.", "type": "number",
-                                 "names": ["amount"],
-                                 "questions": ["unit=в каких единицах?|копейки|рубли"],
-                                 "values": ["zero", "typical"]}, 9),
-                             call("sm_catalog", {"model": m, "name": "amount",
-                                                 "type": "number"}, 3),
+
                              call("sm_param_add", {"model": m, "name": "amount",
-                                                   "type": "number",
-                                                   "values": ["zero", "typical"],
-                                                   "all_values": ["zero", "typical"],
-                                                   "from": "a.ts:1", "answers": ans}, 4),
+                                                   "type": "number", "desc": "сумма",
+                                                   "from": "spec.md:§1"}, 4),
+                             call("sm_param_values", {"model": m, "name": "amount",
+                                                      "all_values": ["zero", "typical"]}, 6),
                              call("sm_show", {"model": m}, 5)])
             for r in out[1:]:
                 self.assertFalse(r["result"].get("isError"), r["result"]["content"][0]["text"])
@@ -107,18 +98,14 @@ class StreamPurity(unittest.TestCase):
             out, err = talk([
                 INIT,
                 call("sm_init", {"model": m, "system": "D", "source": "spec.md"}, 2),
-                call("sm_catalog_new", {
-                    "model": m, "id": "money", "title": "Сумма", "desc": "Сумма.",
-                    "type": "number", "names": ["amount"],
-                    "questions": ["unit=в каких единицах?|копейки"],
-                    "values": ["zero", "typical"]}, 7),
                 call("sm_catalog", {"model": m, "name": "amount", "type": "number"}, 3),
                 call("sm_param_add", {"model": m, "name": "amount", "type": "number",
-                                      "values": ["zero", "typical"],
-                                      "all_values": ["zero", "typical"],
-                                      "from": os.path.join(d, "spec.md") + ":§3",
-                                      "answers": ["unit=копейки"]}, 4),
+                                      "desc": "сумма",
+                                      "from": os.path.join(d, "spec.md") + ":§3"}, 4),
+                call("sm_param_values", {"model": m, "name": "amount",
+                                         "all_values": ["zero", "typical"]}, 8),
                 call("sm_state_add", {"model": m, "name": "Любое", "when": [],
+                                      "desc": "всё остальное",
                                       "evidence": os.path.join(d, "spec.md") + ":§3"}, 5),
                 call("sm_build", {"model": m, "root": d}, 6),
             ])
@@ -128,4 +115,4 @@ class StreamPurity(unittest.TestCase):
                 self.assertIn("result", r)
             last = out[-1]["result"]
             self.assertFalse(last.get("isError"), last["content"][0]["text"])
-            self.assertIn("## Матрица", last["content"][0]["text"])
+            self.assertIn("МАТРИЦА", last["content"][0]["text"])

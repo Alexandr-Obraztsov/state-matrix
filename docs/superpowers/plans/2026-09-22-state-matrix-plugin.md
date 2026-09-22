@@ -1,3 +1,6 @@
+> **Исторический документ.** План первой версии; часть задач отменена
+> последующими изменениями. Актуальное устройство — в README и SKILL.md.
+
 # state-matrix Plugin Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

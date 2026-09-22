@@ -1,14 +1,13 @@
 {
   "system": "Checkout",
   "source": "examples/checkout-spec.md",
-  "generated_at": "2026-09-22T23:09:16",
-  "model_hash": "28beb095f264",
+  "generated_at": "2026-09-22T23:31:31",
+  "model_hash": "a9ff7e38aace",
   "ceiling": 100,
   "params": {
     "cart": {
       "type": "endpoint",
       "desc": "Ответ на запрос корзины",
-      "catalog": "http_endpoint",
       "all_values": [
         "pending",
         "ok",
@@ -22,28 +21,16 @@
         "ok_empty",
         "error"
       ],
-      "grouping": "error_network и error_server спека §2 описывает одинаково — заглушка с кнопкой «Повторить», поэтому в матрице один класс error",
+      "grouping": "§2 описывает обе ошибки одинаково — заглушка с кнопкой «Повторить»",
       "special": [
-        "status_422",
         "timeout",
         "malformed"
       ],
-      "from": "examples/checkout-spec.md:§2 — GET /api/cart",
-      "answers": {
-        "codes": "200, 422 при превышении лимита; остальные не описаны — спросил у пользователя",
-        "empty": "да — §2 описывает «Корзина пуста»",
-        "partial": "в спеке не сказано",
-        "timeout": "в спеке не сказано",
-        "auth": "в спеке не сказано",
-        "late": "в спеке не сказано",
-        "order": "единственный запрос",
-        "retry": "да — §2, кнопка «Повторить»"
-      }
+      "from": "examples/checkout-spec.md:§2"
     },
     "amount": {
       "type": "number",
       "desc": "Сумма заказа в копейках",
-      "catalog": "money_amount",
       "all_values": [
         "zero",
         "min_unit",
@@ -57,22 +44,13 @@
         "over_max"
       ],
       "special": [
-        "negative",
-        "fractional_unit"
+        "negative"
       ],
-      "from": "examples/checkout-spec.md:§3",
-      "answers": {
-        "unit": "копейки — §3",
-        "zero": "да, бесплатный заказ — §3",
-        "negative": "в спеке не сказано",
-        "max": "999999900 копеек — §3",
-        "rounding": "в спеке не сказано"
-      }
+      "from": "examples/checkout-spec.md:§3"
     },
     "auth": {
       "type": "enum",
       "desc": "Авторизован ли пользователь",
-      "catalog": "auth_role",
       "all_values": [
         "guest",
         "user"
@@ -81,19 +59,26 @@
         "guest",
         "user"
       ],
-      "from": "examples/checkout-spec.md:§4",
-      "answers": {
-        "roles": "гость и авторизованный — §4",
-        "anon": "да — §4",
-        "owner": "в спеке не сказано",
-        "denied": "в спеке не сказано",
-        "mid": "в спеке не сказано"
-      }
+      "from": "examples/checkout-spec.md:§4"
+    },
+    "promo": {
+      "type": "enum",
+      "desc": "Состояние промокода",
+      "all_values": [
+        "absent",
+        "valid",
+        "expired"
+      ],
+      "values": [
+        "absent",
+        "valid",
+        "expired"
+      ],
+      "from": "examples/checkout-spec.md:§4"
     },
     "viewport": {
       "type": "enum",
       "desc": "Брейкпоинт, фиксируется при загрузке",
-      "catalog": "viewport",
       "all_values": [
         "mobile",
         "tablet",
@@ -105,40 +90,12 @@
         "desktop"
       ],
       "from": "examples/checkout-spec.md:§1",
-      "env": true,
-      "answers": {
-        "points": "mobile/tablet/desktop — §1",
-        "runtime": "нет, §1 прямо говорит",
-        "behavior": "в спеке не сказано"
-      }
-    },
-    "promo": {
-      "type": "enum",
-      "desc": "Состояние промокода",
-      "catalog": "promo_code",
-      "all_values": [
-        "absent",
-        "valid",
-        "expired"
-      ],
-      "values": [
-        "absent",
-        "valid",
-        "expired"
-      ],
-      "special": [
-        "unknown_code"
-      ],
-      "from": "examples/checkout-spec.md:§4",
-      "answers": {
-        "list": "нет / валидный / истёкший — §4",
-        "who": "только авторизованным — §4",
-        "expired": "перечёркивается — §4",
-        "recalc": "в спеке не сказано"
-      }
+      "env": true
     }
   },
-  "excluded": {},
+  "excluded": {
+    "кнопка Повторить": "элемент интерфейса, не вход системы"
+  },
   "param_order": [
     "cart",
     "amount",
@@ -172,10 +129,10 @@
         },
         {
           "stage": "после схлопывания",
-          "count": 20,
+          "count": 17,
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
               "removed": null
             },
@@ -188,7 +145,7 @@
         },
         {
           "stage": "+ спецзначения",
-          "count": 26,
+          "count": 20,
           "rules": []
         }
       ],
@@ -200,32 +157,32 @@
             "param": "amount",
             "factor": 4,
             "env_candidate": true,
-            "rows_if_env": 5
+            "rows_if_env": 4
           },
           {
             "param": "cart",
             "factor": 4,
             "env_candidate": true,
-            "rows_if_env": 5
+            "rows_if_env": 4
           },
           {
             "param": "promo",
             "factor": 3,
             "env_candidate": true,
-            "rows_if_env": 6
+            "rows_if_env": 5
           },
           {
             "param": "auth",
             "factor": 2,
             "env_candidate": true,
-            "rows_if_env": 10
+            "rows_if_env": 8
           }
         ],
         "unruled": [],
         "cheapest": [
-          "пометить env: amount (×4) → 5 строк",
-          "пометить env: cart (×4) → 5 строк",
-          "пометить env: promo (×3) → 6 строк"
+          "пометить env: amount (×4) → 4 строк",
+          "пометить env: cart (×4) → 4 строк",
+          "пометить env: promo (×3) → 5 строк"
         ]
       },
       "rules": [
@@ -243,8 +200,8 @@
         {
           "id": "r2",
           "kind": "схлопывание",
-          "what": "при cart = «pending» или «error» или «ok_empty» значения amount, promo на исход не влияют",
-          "effect": "колонки amount, promo сливаются в «∗»",
+          "what": "при cart = «pending» или «error» или «ok_empty» значения amount, promo, auth на исход не влияют",
+          "effect": "колонки amount, promo, auth сливаются в «∗»",
           "desc": "Пока корзина не пришла, поля формы ни на что не влияют",
           "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
           "status": "proven",
@@ -266,34 +223,34 @@
       "states": [
         {
           "name": "Загрузка",
-          "desc": "Скелетон формы",
+          "desc": "Скелетон формы, кнопка оплаты скрыта",
           "when": {
             "cart": "pending"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Ошибка сети",
-          "desc": "Заглушка с кнопкой «Повторить»",
+          "desc": "Заглушка с кнопкой «Повторить», формы нет",
           "when": {
             "cart": "error"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Пустая корзина",
-          "desc": "«Корзина пуста», заказ оформить нельзя",
+          "desc": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
           "when": {
             "cart": "ok_empty"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Бесплатный заказ",
-          "desc": "Оплата не запрашивается",
+          "desc": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "when": {
             "cart": "ok",
             "amount": "zero"
@@ -302,13 +259,23 @@
           "rows": 2
         },
         {
+          "name": "Промокод истёк",
+          "desc": "Промокод перечёркнут, сумма пересчитана обратно",
+          "when": {
+            "cart": "ok",
+            "promo": "expired"
+          },
+          "evidence": "examples/checkout-spec.md:§4",
+          "rows": 3
+        },
+        {
           "name": "Оформление",
-          "desc": "Обычный случай",
+          "desc": "Форма оплаты, поле промокода видно только авторизованным",
           "when": {
             "cart": "ok"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 12
+          "rows": 9
         }
       ],
       "no_state": 0,
@@ -319,11 +286,11 @@
           "values": {
             "cart": "pending",
             "amount": "*",
-            "auth": "guest",
+            "auth": "*",
             "promo": "*",
             "viewport": "mobile"
           },
-          "covers": 4,
+          "covers": 16,
           "collapsed": {
             "amount": [
               "min_unit",
@@ -331,41 +298,9 @@
               "typical",
               "zero"
             ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=pending|promo=*|viewport=mobile",
-          "state": "Загрузка",
-          "outcome": "Скелетон формы",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0001",
-          "values": {
-            "cart": "pending",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "mobile"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
+            "auth": [
+              "guest",
+              "user"
             ],
             "promo": [
               "absent",
@@ -375,21 +310,21 @@
           },
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
             }
           ],
           "mixed": false,
-          "key": "amount=*|auth=user|cart=pending|promo=*|viewport=mobile",
+          "key": "amount=*|auth=*|cart=pending|promo=*|viewport=mobile",
           "state": "Загрузка",
-          "outcome": "Скелетон формы",
+          "outcome": "Скелетон формы, кнопка оплаты скрыта",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0002",
+          "id": "r0001",
           "values": {
             "cart": "ok",
             "amount": "zero",
@@ -412,14 +347,14 @@
           "mixed": false,
           "key": "amount=zero|auth=guest|cart=ok|promo=*|viewport=mobile",
           "state": "Бесплатный заказ",
-          "outcome": "Оплата не запрашивается",
+          "outcome": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0003",
+          "id": "r0002",
           "values": {
             "cart": "ok",
             "amount": "zero",
@@ -444,14 +379,14 @@
           "mixed": false,
           "key": "amount=zero|auth=user|cart=ok|promo=*|viewport=mobile",
           "state": "Бесплатный заказ",
-          "outcome": "Оплата не запрашивается",
+          "outcome": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0004",
+          "id": "r0003",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -465,14 +400,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=guest|cart=ok|promo=absent|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0005",
+          "id": "r0004",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -486,14 +421,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=absent|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0006",
+          "id": "r0005",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -507,14 +442,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=valid|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0007",
+          "id": "r0006",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -527,15 +462,15 @@
           "rules": [],
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=expired|viewport=mobile",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0008",
+          "id": "r0007",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -549,14 +484,14 @@
           "mixed": false,
           "key": "amount=typical|auth=guest|cart=ok|promo=absent|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0009",
+          "id": "r0008",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -570,14 +505,14 @@
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=absent|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0010",
+          "id": "r0009",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -591,14 +526,14 @@
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=valid|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0011",
+          "id": "r0010",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -611,15 +546,15 @@
           "rules": [],
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=expired|viewport=mobile",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0012",
+          "id": "r0011",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -633,14 +568,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=guest|cart=ok|promo=absent|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0013",
+          "id": "r0012",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -654,14 +589,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=absent|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0014",
+          "id": "r0013",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -675,14 +610,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=valid|viewport=mobile",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0015",
+          "id": "r0014",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -695,8 +630,50 @@
           "rules": [],
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=expired|viewport=mobile",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
+          "status": "described",
+          "reachable": null,
+          "path": null
+        },
+        {
+          "id": "r0015",
+          "values": {
+            "cart": "ok_empty",
+            "amount": "*",
+            "auth": "*",
+            "promo": "*",
+            "viewport": "mobile"
+          },
+          "covers": 16,
+          "collapsed": {
+            "amount": [
+              "min_unit",
+              "over_max",
+              "typical",
+              "zero"
+            ],
+            "auth": [
+              "guest",
+              "user"
+            ],
+            "promo": [
+              "absent",
+              "expired",
+              "valid"
+            ]
+          },
+          "rules": [
+            {
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
+              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
+            }
+          ],
+          "mixed": false,
+          "key": "amount=*|auth=*|cart=ok_empty|promo=*|viewport=mobile",
+          "state": "Пустая корзина",
+          "outcome": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
@@ -705,13 +682,13 @@
         {
           "id": "r0016",
           "values": {
-            "cart": "ok_empty",
+            "cart": "error",
             "amount": "*",
-            "auth": "guest",
+            "auth": "*",
             "promo": "*",
             "viewport": "mobile"
           },
-          "covers": 4,
+          "covers": 16,
           "collapsed": {
             "amount": [
               "min_unit",
@@ -719,41 +696,9 @@
               "typical",
               "zero"
             ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=ok_empty|promo=*|viewport=mobile",
-          "state": "Пустая корзина",
-          "outcome": "«Корзина пуста», заказ оформить нельзя",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0017",
-          "values": {
-            "cart": "ok_empty",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "mobile"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
+            "auth": [
+              "guest",
+              "user"
             ],
             "promo": [
               "absent",
@@ -763,88 +708,14 @@
           },
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
             }
           ],
           "mixed": false,
-          "key": "amount=*|auth=user|cart=ok_empty|promo=*|viewport=mobile",
-          "state": "Пустая корзина",
-          "outcome": "«Корзина пуста», заказ оформить нельзя",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0018",
-          "values": {
-            "cart": "error",
-            "amount": "*",
-            "auth": "guest",
-            "promo": "*",
-            "viewport": "mobile"
-          },
-          "covers": 4,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
-            ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=error|promo=*|viewport=mobile",
+          "key": "amount=*|auth=*|cart=error|promo=*|viewport=mobile",
           "state": "Ошибка сети",
-          "outcome": "Заглушка с кнопкой «Повторить»",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0019",
-          "values": {
-            "cart": "error",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "mobile"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
-            ],
-            "promo": [
-              "absent",
-              "expired",
-              "valid"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=user|cart=error|promo=*|viewport=mobile",
-          "state": "Ошибка сети",
-          "outcome": "Заглушка с кнопкой «Повторить»",
+          "outcome": "Заглушка с кнопкой «Повторить», формы нет",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
@@ -854,33 +725,18 @@
       "specials": [
         {
           "param": "cart",
-          "value": "status_422",
+          "value": "timeout",
           "id": "s000"
         },
         {
           "param": "cart",
-          "value": "timeout",
-          "id": "s001"
-        },
-        {
-          "param": "cart",
           "value": "malformed",
-          "id": "s002"
+          "id": "s001"
         },
         {
           "param": "amount",
           "value": "negative",
-          "id": "s003"
-        },
-        {
-          "param": "amount",
-          "value": "fractional_unit",
-          "id": "s004"
-        },
-        {
-          "param": "promo",
-          "value": "unknown_code",
-          "id": "s005"
+          "id": "s002"
         }
       ],
       "findings": [
@@ -894,7 +750,7 @@
             "promo": "absent",
             "viewport": "mobile"
           },
-          "message": "два правила применимы одновременно к 12 комбинациям — порядок проверок не определён: «cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo» (examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится) и «amount=zero → не важно: promo» (examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты)"
+          "message": "два правила применимы одновременно к 12 комбинациям — порядок проверок не определён: «cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth» (examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится) и «amount=zero → не важно: promo» (examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты)"
         }
       ],
       "transitions": [],
@@ -902,9 +758,9 @@
       "counts": {
         "total": 96,
         "valid": 64,
-        "collapsed": 20,
-        "specials": 6,
-        "to_review": 26,
+        "collapsed": 17,
+        "specials": 3,
+        "to_review": 20,
         "reachable": null,
         "undefined": 0
       }
@@ -932,10 +788,10 @@
         },
         {
           "stage": "после схлопывания",
-          "count": 20,
+          "count": 17,
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
               "removed": null
             },
@@ -948,7 +804,7 @@
         },
         {
           "stage": "+ спецзначения",
-          "count": 26,
+          "count": 20,
           "rules": []
         }
       ],
@@ -960,32 +816,32 @@
             "param": "amount",
             "factor": 4,
             "env_candidate": true,
-            "rows_if_env": 5
+            "rows_if_env": 4
           },
           {
             "param": "cart",
             "factor": 4,
             "env_candidate": true,
-            "rows_if_env": 5
+            "rows_if_env": 4
           },
           {
             "param": "promo",
             "factor": 3,
             "env_candidate": true,
-            "rows_if_env": 6
+            "rows_if_env": 5
           },
           {
             "param": "auth",
             "factor": 2,
             "env_candidate": true,
-            "rows_if_env": 10
+            "rows_if_env": 8
           }
         ],
         "unruled": [],
         "cheapest": [
-          "пометить env: amount (×4) → 5 строк",
-          "пометить env: cart (×4) → 5 строк",
-          "пометить env: promo (×3) → 6 строк"
+          "пометить env: amount (×4) → 4 строк",
+          "пометить env: cart (×4) → 4 строк",
+          "пометить env: promo (×3) → 5 строк"
         ]
       },
       "rules": [
@@ -1003,8 +859,8 @@
         {
           "id": "r2",
           "kind": "схлопывание",
-          "what": "при cart = «pending» или «error» или «ok_empty» значения amount, promo на исход не влияют",
-          "effect": "колонки amount, promo сливаются в «∗»",
+          "what": "при cart = «pending» или «error» или «ok_empty» значения amount, promo, auth на исход не влияют",
+          "effect": "колонки amount, promo, auth сливаются в «∗»",
           "desc": "Пока корзина не пришла, поля формы ни на что не влияют",
           "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
           "status": "proven",
@@ -1026,34 +882,34 @@
       "states": [
         {
           "name": "Загрузка",
-          "desc": "Скелетон формы",
+          "desc": "Скелетон формы, кнопка оплаты скрыта",
           "when": {
             "cart": "pending"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Ошибка сети",
-          "desc": "Заглушка с кнопкой «Повторить»",
+          "desc": "Заглушка с кнопкой «Повторить», формы нет",
           "when": {
             "cart": "error"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Пустая корзина",
-          "desc": "«Корзина пуста», заказ оформить нельзя",
+          "desc": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
           "when": {
             "cart": "ok_empty"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Бесплатный заказ",
-          "desc": "Оплата не запрашивается",
+          "desc": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "when": {
             "cart": "ok",
             "amount": "zero"
@@ -1062,13 +918,23 @@
           "rows": 2
         },
         {
+          "name": "Промокод истёк",
+          "desc": "Промокод перечёркнут, сумма пересчитана обратно",
+          "when": {
+            "cart": "ok",
+            "promo": "expired"
+          },
+          "evidence": "examples/checkout-spec.md:§4",
+          "rows": 3
+        },
+        {
           "name": "Оформление",
-          "desc": "Обычный случай",
+          "desc": "Форма оплаты, поле промокода видно только авторизованным",
           "when": {
             "cart": "ok"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 12
+          "rows": 9
         }
       ],
       "no_state": 0,
@@ -1079,11 +945,11 @@
           "values": {
             "cart": "pending",
             "amount": "*",
-            "auth": "guest",
+            "auth": "*",
             "promo": "*",
             "viewport": "tablet"
           },
-          "covers": 4,
+          "covers": 16,
           "collapsed": {
             "amount": [
               "min_unit",
@@ -1091,41 +957,9 @@
               "typical",
               "zero"
             ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=pending|promo=*|viewport=tablet",
-          "state": "Загрузка",
-          "outcome": "Скелетон формы",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0001",
-          "values": {
-            "cart": "pending",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "tablet"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
+            "auth": [
+              "guest",
+              "user"
             ],
             "promo": [
               "absent",
@@ -1135,21 +969,21 @@
           },
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
             }
           ],
           "mixed": false,
-          "key": "amount=*|auth=user|cart=pending|promo=*|viewport=tablet",
+          "key": "amount=*|auth=*|cart=pending|promo=*|viewport=tablet",
           "state": "Загрузка",
-          "outcome": "Скелетон формы",
+          "outcome": "Скелетон формы, кнопка оплаты скрыта",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0002",
+          "id": "r0001",
           "values": {
             "cart": "ok",
             "amount": "zero",
@@ -1172,14 +1006,14 @@
           "mixed": false,
           "key": "amount=zero|auth=guest|cart=ok|promo=*|viewport=tablet",
           "state": "Бесплатный заказ",
-          "outcome": "Оплата не запрашивается",
+          "outcome": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0003",
+          "id": "r0002",
           "values": {
             "cart": "ok",
             "amount": "zero",
@@ -1204,14 +1038,14 @@
           "mixed": false,
           "key": "amount=zero|auth=user|cart=ok|promo=*|viewport=tablet",
           "state": "Бесплатный заказ",
-          "outcome": "Оплата не запрашивается",
+          "outcome": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0004",
+          "id": "r0003",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -1225,14 +1059,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=guest|cart=ok|promo=absent|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0005",
+          "id": "r0004",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -1246,14 +1080,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=absent|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0006",
+          "id": "r0005",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -1267,14 +1101,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=valid|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0007",
+          "id": "r0006",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -1287,15 +1121,15 @@
           "rules": [],
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=expired|viewport=tablet",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0008",
+          "id": "r0007",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -1309,14 +1143,14 @@
           "mixed": false,
           "key": "amount=typical|auth=guest|cart=ok|promo=absent|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0009",
+          "id": "r0008",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -1330,14 +1164,14 @@
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=absent|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0010",
+          "id": "r0009",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -1351,14 +1185,14 @@
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=valid|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0011",
+          "id": "r0010",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -1371,15 +1205,15 @@
           "rules": [],
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=expired|viewport=tablet",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0012",
+          "id": "r0011",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -1393,14 +1227,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=guest|cart=ok|promo=absent|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0013",
+          "id": "r0012",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -1414,14 +1248,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=absent|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0014",
+          "id": "r0013",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -1435,14 +1269,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=valid|viewport=tablet",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0015",
+          "id": "r0014",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -1455,8 +1289,50 @@
           "rules": [],
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=expired|viewport=tablet",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
+          "status": "described",
+          "reachable": null,
+          "path": null
+        },
+        {
+          "id": "r0015",
+          "values": {
+            "cart": "ok_empty",
+            "amount": "*",
+            "auth": "*",
+            "promo": "*",
+            "viewport": "tablet"
+          },
+          "covers": 16,
+          "collapsed": {
+            "amount": [
+              "min_unit",
+              "over_max",
+              "typical",
+              "zero"
+            ],
+            "auth": [
+              "guest",
+              "user"
+            ],
+            "promo": [
+              "absent",
+              "expired",
+              "valid"
+            ]
+          },
+          "rules": [
+            {
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
+              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
+            }
+          ],
+          "mixed": false,
+          "key": "amount=*|auth=*|cart=ok_empty|promo=*|viewport=tablet",
+          "state": "Пустая корзина",
+          "outcome": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
@@ -1465,13 +1341,13 @@
         {
           "id": "r0016",
           "values": {
-            "cart": "ok_empty",
+            "cart": "error",
             "amount": "*",
-            "auth": "guest",
+            "auth": "*",
             "promo": "*",
             "viewport": "tablet"
           },
-          "covers": 4,
+          "covers": 16,
           "collapsed": {
             "amount": [
               "min_unit",
@@ -1479,41 +1355,9 @@
               "typical",
               "zero"
             ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=ok_empty|promo=*|viewport=tablet",
-          "state": "Пустая корзина",
-          "outcome": "«Корзина пуста», заказ оформить нельзя",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0017",
-          "values": {
-            "cart": "ok_empty",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "tablet"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
+            "auth": [
+              "guest",
+              "user"
             ],
             "promo": [
               "absent",
@@ -1523,88 +1367,14 @@
           },
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
             }
           ],
           "mixed": false,
-          "key": "amount=*|auth=user|cart=ok_empty|promo=*|viewport=tablet",
-          "state": "Пустая корзина",
-          "outcome": "«Корзина пуста», заказ оформить нельзя",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0018",
-          "values": {
-            "cart": "error",
-            "amount": "*",
-            "auth": "guest",
-            "promo": "*",
-            "viewport": "tablet"
-          },
-          "covers": 4,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
-            ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=error|promo=*|viewport=tablet",
+          "key": "amount=*|auth=*|cart=error|promo=*|viewport=tablet",
           "state": "Ошибка сети",
-          "outcome": "Заглушка с кнопкой «Повторить»",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0019",
-          "values": {
-            "cart": "error",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "tablet"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
-            ],
-            "promo": [
-              "absent",
-              "expired",
-              "valid"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=user|cart=error|promo=*|viewport=tablet",
-          "state": "Ошибка сети",
-          "outcome": "Заглушка с кнопкой «Повторить»",
+          "outcome": "Заглушка с кнопкой «Повторить», формы нет",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
@@ -1614,33 +1384,18 @@
       "specials": [
         {
           "param": "cart",
-          "value": "status_422",
+          "value": "timeout",
           "id": "s000"
         },
         {
           "param": "cart",
-          "value": "timeout",
-          "id": "s001"
-        },
-        {
-          "param": "cart",
           "value": "malformed",
-          "id": "s002"
+          "id": "s001"
         },
         {
           "param": "amount",
           "value": "negative",
-          "id": "s003"
-        },
-        {
-          "param": "amount",
-          "value": "fractional_unit",
-          "id": "s004"
-        },
-        {
-          "param": "promo",
-          "value": "unknown_code",
-          "id": "s005"
+          "id": "s002"
         }
       ],
       "findings": [
@@ -1654,7 +1409,7 @@
             "promo": "absent",
             "viewport": "tablet"
           },
-          "message": "два правила применимы одновременно к 12 комбинациям — порядок проверок не определён: «cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo» (examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится) и «amount=zero → не важно: promo» (examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты)"
+          "message": "два правила применимы одновременно к 12 комбинациям — порядок проверок не определён: «cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth» (examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится) и «amount=zero → не важно: promo» (examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты)"
         }
       ],
       "transitions": [],
@@ -1662,9 +1417,9 @@
       "counts": {
         "total": 96,
         "valid": 64,
-        "collapsed": 20,
-        "specials": 6,
-        "to_review": 26,
+        "collapsed": 17,
+        "specials": 3,
+        "to_review": 20,
         "reachable": null,
         "undefined": 0
       }
@@ -1692,10 +1447,10 @@
         },
         {
           "stage": "после схлопывания",
-          "count": 20,
+          "count": 17,
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
               "removed": null
             },
@@ -1708,7 +1463,7 @@
         },
         {
           "stage": "+ спецзначения",
-          "count": 26,
+          "count": 20,
           "rules": []
         }
       ],
@@ -1720,32 +1475,32 @@
             "param": "amount",
             "factor": 4,
             "env_candidate": true,
-            "rows_if_env": 5
+            "rows_if_env": 4
           },
           {
             "param": "cart",
             "factor": 4,
             "env_candidate": true,
-            "rows_if_env": 5
+            "rows_if_env": 4
           },
           {
             "param": "promo",
             "factor": 3,
             "env_candidate": true,
-            "rows_if_env": 6
+            "rows_if_env": 5
           },
           {
             "param": "auth",
             "factor": 2,
             "env_candidate": true,
-            "rows_if_env": 10
+            "rows_if_env": 8
           }
         ],
         "unruled": [],
         "cheapest": [
-          "пометить env: amount (×4) → 5 строк",
-          "пометить env: cart (×4) → 5 строк",
-          "пометить env: promo (×3) → 6 строк"
+          "пометить env: amount (×4) → 4 строк",
+          "пометить env: cart (×4) → 4 строк",
+          "пометить env: promo (×3) → 5 строк"
         ]
       },
       "rules": [
@@ -1763,8 +1518,8 @@
         {
           "id": "r2",
           "kind": "схлопывание",
-          "what": "при cart = «pending» или «error» или «ok_empty» значения amount, promo на исход не влияют",
-          "effect": "колонки amount, promo сливаются в «∗»",
+          "what": "при cart = «pending» или «error» или «ok_empty» значения amount, promo, auth на исход не влияют",
+          "effect": "колонки amount, promo, auth сливаются в «∗»",
           "desc": "Пока корзина не пришла, поля формы ни на что не влияют",
           "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
           "status": "proven",
@@ -1786,34 +1541,34 @@
       "states": [
         {
           "name": "Загрузка",
-          "desc": "Скелетон формы",
+          "desc": "Скелетон формы, кнопка оплаты скрыта",
           "when": {
             "cart": "pending"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Ошибка сети",
-          "desc": "Заглушка с кнопкой «Повторить»",
+          "desc": "Заглушка с кнопкой «Повторить», формы нет",
           "when": {
             "cart": "error"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Пустая корзина",
-          "desc": "«Корзина пуста», заказ оформить нельзя",
+          "desc": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
           "when": {
             "cart": "ok_empty"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 2
+          "rows": 1
         },
         {
           "name": "Бесплатный заказ",
-          "desc": "Оплата не запрашивается",
+          "desc": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "when": {
             "cart": "ok",
             "amount": "zero"
@@ -1822,13 +1577,23 @@
           "rows": 2
         },
         {
+          "name": "Промокод истёк",
+          "desc": "Промокод перечёркнут, сумма пересчитана обратно",
+          "when": {
+            "cart": "ok",
+            "promo": "expired"
+          },
+          "evidence": "examples/checkout-spec.md:§4",
+          "rows": 3
+        },
+        {
           "name": "Оформление",
-          "desc": "Обычный случай",
+          "desc": "Форма оплаты, поле промокода видно только авторизованным",
           "when": {
             "cart": "ok"
           },
           "evidence": "examples/checkout-spec.md:§5",
-          "rows": 12
+          "rows": 9
         }
       ],
       "no_state": 0,
@@ -1839,11 +1604,11 @@
           "values": {
             "cart": "pending",
             "amount": "*",
-            "auth": "guest",
+            "auth": "*",
             "promo": "*",
             "viewport": "desktop"
           },
-          "covers": 4,
+          "covers": 16,
           "collapsed": {
             "amount": [
               "min_unit",
@@ -1851,41 +1616,9 @@
               "typical",
               "zero"
             ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=pending|promo=*|viewport=desktop",
-          "state": "Загрузка",
-          "outcome": "Скелетон формы",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0001",
-          "values": {
-            "cart": "pending",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "desktop"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
+            "auth": [
+              "guest",
+              "user"
             ],
             "promo": [
               "absent",
@@ -1895,21 +1628,21 @@
           },
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
             }
           ],
           "mixed": false,
-          "key": "amount=*|auth=user|cart=pending|promo=*|viewport=desktop",
+          "key": "amount=*|auth=*|cart=pending|promo=*|viewport=desktop",
           "state": "Загрузка",
-          "outcome": "Скелетон формы",
+          "outcome": "Скелетон формы, кнопка оплаты скрыта",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0002",
+          "id": "r0001",
           "values": {
             "cart": "ok",
             "amount": "zero",
@@ -1932,14 +1665,14 @@
           "mixed": false,
           "key": "amount=zero|auth=guest|cart=ok|promo=*|viewport=desktop",
           "state": "Бесплатный заказ",
-          "outcome": "Оплата не запрашивается",
+          "outcome": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0003",
+          "id": "r0002",
           "values": {
             "cart": "ok",
             "amount": "zero",
@@ -1964,14 +1697,14 @@
           "mixed": false,
           "key": "amount=zero|auth=user|cart=ok|promo=*|viewport=desktop",
           "state": "Бесплатный заказ",
-          "outcome": "Оплата не запрашивается",
+          "outcome": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0004",
+          "id": "r0003",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -1985,14 +1718,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=guest|cart=ok|promo=absent|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0005",
+          "id": "r0004",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -2006,14 +1739,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=absent|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0006",
+          "id": "r0005",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -2027,14 +1760,14 @@
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=valid|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0007",
+          "id": "r0006",
           "values": {
             "cart": "ok",
             "amount": "min_unit",
@@ -2047,15 +1780,15 @@
           "rules": [],
           "mixed": false,
           "key": "amount=min_unit|auth=user|cart=ok|promo=expired|viewport=desktop",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0008",
+          "id": "r0007",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -2069,14 +1802,14 @@
           "mixed": false,
           "key": "amount=typical|auth=guest|cart=ok|promo=absent|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0009",
+          "id": "r0008",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -2090,14 +1823,14 @@
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=absent|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0010",
+          "id": "r0009",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -2111,14 +1844,14 @@
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=valid|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0011",
+          "id": "r0010",
           "values": {
             "cart": "ok",
             "amount": "typical",
@@ -2131,15 +1864,15 @@
           "rules": [],
           "mixed": false,
           "key": "amount=typical|auth=user|cart=ok|promo=expired|viewport=desktop",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0012",
+          "id": "r0011",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -2153,14 +1886,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=guest|cart=ok|promo=absent|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0013",
+          "id": "r0012",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -2174,14 +1907,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=absent|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0014",
+          "id": "r0013",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -2195,14 +1928,14 @@
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=valid|viewport=desktop",
           "state": "Оформление",
-          "outcome": "Обычный случай",
+          "outcome": "Форма оплаты, поле промокода видно только авторизованным",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
           "path": null
         },
         {
-          "id": "r0015",
+          "id": "r0014",
           "values": {
             "cart": "ok",
             "amount": "over_max",
@@ -2215,8 +1948,50 @@
           "rules": [],
           "mixed": false,
           "key": "amount=over_max|auth=user|cart=ok|promo=expired|viewport=desktop",
-          "state": "Оформление",
-          "outcome": "Обычный случай",
+          "state": "Промокод истёк",
+          "outcome": "Промокод перечёркнут, сумма пересчитана обратно",
+          "outcome_evidence": "examples/checkout-spec.md:§4",
+          "status": "described",
+          "reachable": null,
+          "path": null
+        },
+        {
+          "id": "r0015",
+          "values": {
+            "cart": "ok_empty",
+            "amount": "*",
+            "auth": "*",
+            "promo": "*",
+            "viewport": "desktop"
+          },
+          "covers": 16,
+          "collapsed": {
+            "amount": [
+              "min_unit",
+              "over_max",
+              "typical",
+              "zero"
+            ],
+            "auth": [
+              "guest",
+              "user"
+            ],
+            "promo": [
+              "absent",
+              "expired",
+              "valid"
+            ]
+          },
+          "rules": [
+            {
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
+              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
+            }
+          ],
+          "mixed": false,
+          "key": "amount=*|auth=*|cart=ok_empty|promo=*|viewport=desktop",
+          "state": "Пустая корзина",
+          "outcome": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
@@ -2225,13 +2000,13 @@
         {
           "id": "r0016",
           "values": {
-            "cart": "ok_empty",
+            "cart": "error",
             "amount": "*",
-            "auth": "guest",
+            "auth": "*",
             "promo": "*",
             "viewport": "desktop"
           },
-          "covers": 4,
+          "covers": 16,
           "collapsed": {
             "amount": [
               "min_unit",
@@ -2239,41 +2014,9 @@
               "typical",
               "zero"
             ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=ok_empty|promo=*|viewport=desktop",
-          "state": "Пустая корзина",
-          "outcome": "«Корзина пуста», заказ оформить нельзя",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0017",
-          "values": {
-            "cart": "ok_empty",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "desktop"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
+            "auth": [
+              "guest",
+              "user"
             ],
             "promo": [
               "absent",
@@ -2283,88 +2026,14 @@
           },
           "rules": [
             {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
+              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth",
               "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
             }
           ],
           "mixed": false,
-          "key": "amount=*|auth=user|cart=ok_empty|promo=*|viewport=desktop",
-          "state": "Пустая корзина",
-          "outcome": "«Корзина пуста», заказ оформить нельзя",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0018",
-          "values": {
-            "cart": "error",
-            "amount": "*",
-            "auth": "guest",
-            "promo": "*",
-            "viewport": "desktop"
-          },
-          "covers": 4,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
-            ],
-            "promo": [
-              "absent"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=guest|cart=error|promo=*|viewport=desktop",
+          "key": "amount=*|auth=*|cart=error|promo=*|viewport=desktop",
           "state": "Ошибка сети",
-          "outcome": "Заглушка с кнопкой «Повторить»",
-          "outcome_evidence": "examples/checkout-spec.md:§5",
-          "status": "described",
-          "reachable": null,
-          "path": null
-        },
-        {
-          "id": "r0019",
-          "values": {
-            "cart": "error",
-            "amount": "*",
-            "auth": "user",
-            "promo": "*",
-            "viewport": "desktop"
-          },
-          "covers": 12,
-          "collapsed": {
-            "amount": [
-              "min_unit",
-              "over_max",
-              "typical",
-              "zero"
-            ],
-            "promo": [
-              "absent",
-              "expired",
-              "valid"
-            ]
-          },
-          "rules": [
-            {
-              "rule": "cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo",
-              "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится"
-            }
-          ],
-          "mixed": false,
-          "key": "amount=*|auth=user|cart=error|promo=*|viewport=desktop",
-          "state": "Ошибка сети",
-          "outcome": "Заглушка с кнопкой «Повторить»",
+          "outcome": "Заглушка с кнопкой «Повторить», формы нет",
           "outcome_evidence": "examples/checkout-spec.md:§5",
           "status": "described",
           "reachable": null,
@@ -2374,33 +2043,18 @@
       "specials": [
         {
           "param": "cart",
-          "value": "status_422",
+          "value": "timeout",
           "id": "s000"
         },
         {
           "param": "cart",
-          "value": "timeout",
-          "id": "s001"
-        },
-        {
-          "param": "cart",
           "value": "malformed",
-          "id": "s002"
+          "id": "s001"
         },
         {
           "param": "amount",
           "value": "negative",
-          "id": "s003"
-        },
-        {
-          "param": "amount",
-          "value": "fractional_unit",
-          "id": "s004"
-        },
-        {
-          "param": "promo",
-          "value": "unknown_code",
-          "id": "s005"
+          "id": "s002"
         }
       ],
       "findings": [
@@ -2414,7 +2068,7 @@
             "promo": "absent",
             "viewport": "desktop"
           },
-          "message": "два правила применимы одновременно к 12 комбинациям — порядок проверок не определён: «cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo» (examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится) и «amount=zero → не важно: promo» (examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты)"
+          "message": "два правила применимы одновременно к 12 комбинациям — порядок проверок не определён: «cart=['pending', 'error', 'ok_empty'] → не важно: amount, promo, auth» (examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится) и «amount=zero → не важно: promo» (examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты)"
         }
       ],
       "transitions": [],
@@ -2422,9 +2076,9 @@
       "counts": {
         "total": 96,
         "valid": 64,
-        "collapsed": 20,
-        "specials": 6,
-        "to_review": 26,
+        "collapsed": 17,
+        "specials": 3,
+        "to_review": 20,
         "reachable": null,
         "undefined": 0
       }
@@ -2433,7 +2087,7 @@
   "summary": {
     "environments": 3,
     "total": 288,
-    "worst_slice": 20,
+    "worst_slice": 17,
     "over_ceiling": false,
     "findings": 3
   }
