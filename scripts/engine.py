@@ -211,6 +211,30 @@ def match_state(row, states):
 
 # ---------- сборка ----------
 
+def advise(params, matrix_len, model, cons):
+    """Вклад параметров в размер матрицы и самые дешёвые способы ужаться."""
+    changed = set()
+    for t in (model.get("transitions") or []):
+        changed |= set((t.get("set") or {}).keys())
+    ruled = set()
+    for c in cons:
+        ruled |= set((c.get("forbid") or {}).keys())
+        ruled |= set((c.get("when") or {}).keys())
+        ruled |= set(c.get("irrelevant") or [])
+    contrib = []
+    for n, p in params.items():
+        f = len(p["values"])
+        contrib.append({"param": n, "factor": f,
+                        "env_candidate": n not in changed and not p.get("env"),
+                        "rows_if_env": matrix_len // f if f else matrix_len})
+    contrib.sort(key=lambda c: (-c["factor"], c["param"]))
+    cheapest = [f"пометить env: {c['param']} (×{c['factor']}) → {c['rows_if_env']} строк"
+                for c in contrib if c["env_candidate"]][:3]
+    return {"over": matrix_len > CEILING, "ceiling": CEILING,
+            "contributions": contrib, "unruled": sorted(set(params) - ruled),
+            "cheapest": cheapest}
+
+
 def build_slice(model, answers, env_values):
     """Одна матрица для фиксированного окружения."""
     params = {n: v for n, v in model["params"].items() if not v.get("env")}
@@ -294,6 +318,8 @@ def build_slice(model, answers, env_values):
                           "guess": rule_label(c), "evidence": c.get("evidence", "—"),
                           "cost_rows": hits, "answered": answers.get("constraints", {}).get(rid)})
 
+    advice = advise(params, len(matrix), model, cons)
+
     state_stats = []
     for st in states:
         n = sum(1 for m in matrix if m.get("state") == state_name(st))
@@ -367,14 +393,25 @@ def build_slice(model, answers, env_values):
                                     "правило схлопывания слишком широкое",
                          "row_ids": [m["id"] for m in mixed][:200]})
 
-    if len(matrix) > CEILING:
+    if advice["over"]:
+        lines = [f"{len(matrix)} строк при потолке {CEILING}", "",
+                 "вклад параметров:"]
+        for c in advice["contributions"]:
+            tail = (f"env-кандидат → {c['rows_if_env']} строк"
+                    if c["env_candidate"] else "меняется переходами, env не подходит")
+            lines.append(f"  {c['param']:14} ×{c['factor']}   {tail}")
+        if advice["cheapest"]:
+            lines += ["", "дешевле всего: " + "; ".join(advice["cheapest"])]
+        if advice["unruled"]:
+            lines += ["", "без единого правила: " + ", ".join(advice["unruled"])
+                      + " — проверь, влияют ли они на исход вообще"]
         findings.insert(0, {"class": "CEILING", "severity": "block",
-                            "message": f"{len(matrix)} строк после схлопывания при потолке {CEILING} — "
-                                       "это не одна система. Нужно разбиение."})
+                            "message": "\n".join(lines)})
 
     return {
         "env": env_values,
         "funnel": funnel,
+        "advice": advice,
         "rules": rules_out,
         "states": state_stats,
         "no_state": len(no_state),
