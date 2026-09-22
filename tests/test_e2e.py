@@ -37,6 +37,10 @@ class T(unittest.TestCase):
             for sec in ("## Параметры", "## Правила", "## Состояния системы", "## Матрица"):
                 self.assertIn(sec, md)
 
+    def test_no_parser_left(self):
+        self.assertFalse(os.path.exists(os.path.join(SC, "extract.py")),
+                         "парсер кода удалён: инструмент работает только со спеками")
+
     def test_spec_example_has_named_states(self):
         spec = os.path.join(R, "examples", "Checkout.states.json")
         with tempfile.TemporaryDirectory() as d:

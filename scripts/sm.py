@@ -81,16 +81,12 @@ def find(cat, name, type_):
 def cmd_init(a):
     if os.path.exists(a.model) and not a.force:
         die(f"модель {a.model} уже есть", "перезаписать: --force")
-    store.save(a.model, {"system": a.system, "source": a.source, "mode": a.mode,
+    store.save(a.model, {"system": a.system, "source": a.source,
                          "params": {}, "excluded": {}, "constraints": [],
                          "transitions": [], "states": []})
     print(f"модель заведена: {a.model}")
-    if a.mode == "code":
-        print(f"дальше: extract.py {a.source} — кандидаты в параметры,"
-              " каждый в params или в exclude")
-    else:
-        print(f"дальше: прочитай {a.source} и выпиши входные параметры;"
-              " по каждому сначала sm.py catalog, потом param add")
+    print(f"дальше: прочитай {a.source}, выпиши входные параметры;"
+          " по каждому сначала catalog, потом param add")
 
 
 def cmd_show(a):
@@ -438,7 +434,6 @@ def main():
     i = sub.add_parser("init", help="завести пустую модель")
     i.add_argument("model"); i.add_argument("--system", required=True)
     i.add_argument("--source", required=True)
-    i.add_argument("--mode", choices=["code", "spec"], default="code")
     i.add_argument("--force", action="store_true")
     i.set_defaults(fn=cmd_init)
 

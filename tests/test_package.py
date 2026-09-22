@@ -25,7 +25,7 @@ class T(unittest.TestCase):
 
     def test_skill_mentions_pipeline_order(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"), encoding="utf-8").read()
-        for step in ("sm_extract", "sm_catalog", "sm_param_add", "sm_rule_add",
+        for step in ("sm_catalog", "sm_param_add", "sm_rule_add",
                      "sm_state_add", "sm_build"):
             self.assertIn(step, s)
 

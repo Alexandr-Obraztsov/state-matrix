@@ -1,8 +1,11 @@
 # state-matrix
 
-Плагин Claude Code. Разбирает спецификацию или код на входные параметры, их
-значения и состояния системы, сворачивает матрицу по правилам из спеки и
-показывает комбинации, о которых спека молчит.
+Плагин Claude Code. Разбирает **спецификацию** на входные параметры, их значения
+и состояния системы, сворачивает матрицу по правилам из спеки и показывает
+комбинации, о которых спека молчит.
+
+Кода не читает намеренно: если брать источником истины реализацию, матрица
+зафиксирует текущие баги как правильное поведение.
 
 Не генератор тестов: он ищет дыры, противоречия и недостижимые состояния.
 
@@ -29,7 +32,6 @@
 | Тул | Что делает |
 |---|---|
 | `sm_init` | завести модель |
-| `sm_extract` | кандидаты в параметры из кода |
 | `sm_catalog` | **обязательный шаг**: семантика параметра и её вопросы |
 | `sm_catalog_list` / `sm_catalog_new` | посмотреть корзину / завести семантику |
 | `sm_param_add` / `sm_param_rm` / `sm_exclude` | параметры |
@@ -62,7 +64,7 @@
 S=~/.claude/plugins/.../state-matrix/scripts
 
 python3 $S/sm.py init .states/models/Checkout.states.json \
-        --system Checkout --source docs/checkout.md --mode spec
+        --system Checkout --source docs/checkout.md
 python3 $S/sm.py catalog-list
 python3 $S/sm.py catalog .states/models/Checkout.states.json amount --type number
 python3 $S/sm.py param add .states/models/Checkout.states.json --name amount ...
@@ -76,6 +78,6 @@ python3 $S/sm.py build .states/models/Checkout.states.json --root .
 - `param add` отказывает, пока не запрошена корзина и не отвечены её вопросы
 - `rule add` без ссылки `file:line` понижает правило до `assumed`: оно не
   применяется к матрице и требует вопроса человеку
-- `verify.py` проверяет каждую ссылку: файл, строка, упоминание параметра
+- `verify.py` проверяет каждую ссылку: документ существует, раздел в нём есть
 - `validate.py` ловит параметр, добавленный в обход тулов
 - потолок 100 строк: превышение печатает разбор, а не «слишком много»

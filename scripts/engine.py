@@ -449,7 +449,6 @@ def build(model, answers):
     return {
         "system": model["system"],
         "source": model.get("source", "—"),
-        "mode": model.get("mode", "code"),
         "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
         "model_hash": hashlib.sha256(json.dumps(model, sort_keys=True,
                                                 default=str).encode()).hexdigest()[:12],

@@ -3,7 +3,7 @@ R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(R, "scripts"))
 import store, engine
 
-MODEL = os.path.join(R, "examples", "checkout-widget.states.json")
+MODEL = os.path.join(R, "tests", "fixtures", "transitions.states.json")
 
 
 def run(answers=None):

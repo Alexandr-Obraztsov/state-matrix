@@ -8,7 +8,7 @@ import io, json, os, sys, contextlib, traceback
 from types import SimpleNamespace
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sm, extract  # noqa: E402
+import sm  # noqa: E402
 
 VERSION = "1.0.0"
 
@@ -27,10 +27,9 @@ MODEL = S("путь к модели, например .states/models/Checkout.st
 TOOLS = [
     tool("sm_init", "Завести пустую модель. Первый шаг всегда.",
          {"model": MODEL, "system": S("имя системы"),
-          "source": S("путь к спеке или файлу с кодом"),
-          "mode": {"type": "string", "enum": ["spec", "code"],
-                   "description": "spec — разбор спецификации, code — разбор кода"}},
-         ["model", "system", "source"], sm.cmd_init, {"mode": "spec", "force": False}),
+          "source": S("путь к спецификации"),
+          },
+         ["model", "system", "source"], sm.cmd_init, {"force": False}),
 
     tool("sm_extract",
          "Кандидаты в параметры из файла с кодом (React/TS). Каждый обязан попасть "

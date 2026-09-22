@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Проверяет ссылки модели: файл существует, строка существует, на ней (±2)
-упомянут параметр. Ловит выдуманные цитаты. Плюс покрытие кандидатов extract.py."""
+упомянут параметр или раздел. Ловит выдуманные цитаты."""
 import os, re, sys, argparse
 import store
 
@@ -57,25 +57,10 @@ def check_ref(text, token, source, root):
     return "ok", f"{os.path.basename(path)}:{n}"
 
 
-def coverage(model, target, root):
-    """Каждый кандидат extract.py обязан быть параметром или в excluded."""
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import extract
-    path = target if os.path.isabs(target) else os.path.join(root, target)
-    if not os.path.exists(path):
-        return [f"цель {path} не найдена — покрытие не проверено"], 0
-    cands, _, _ = extract.scan(path)
-    known = set(model.get("params") or {}) | set(model.get("excluded") or {})
-    miss = [c for c in cands if c["name"] not in known]
-    return ([f"кандидат «{c['name']}» ({c['kind']}, :{c['line']}) не учтён: "
-             "ни параметр, ни excluded" for c in miss], len(cands))
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("model")
     ap.add_argument("--root", default=".")
-    ap.add_argument("--target", help="файл для проверки покрытия (по умолчанию source модели)")
     a = ap.parse_args()
     m = store.load(a.model)
     src = m.get("source", "")
@@ -101,11 +86,8 @@ def main():
             f"outcomes[{i}]: {msg}")
         ok += st == "ok"
 
-    cov_errs, ncand = coverage(m, a.target or src, a.root)
-    errs += cov_errs
-
     print(f"{a.model}")
-    print(f"  ссылок подтверждено: {ok}   кандидатов проверено: {ncand}")
+    print(f"  ссылок подтверждено: {ok}")
     for x in errs: print("  ERROR    " + x)
     for x in susp: print("  SUSPECT  " + x)
     if unv:

@@ -22,8 +22,7 @@ def main():
     L = []
 
     L.append(f"# {d['system']}")
-    L.append(f"`{d['source']}` · режим: {'спека' if d['mode']=='spec' else 'код'} "
-             f"· окружение: {env}"
+    L.append(f"`{d['source']}` · окружение: {env}"
              + (f" (всего окружений {len(d['slices'])})" if len(d["slices"]) > 1 else ""))
     L.append("")
 

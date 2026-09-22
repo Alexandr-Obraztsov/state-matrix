@@ -1,7 +1,6 @@
 {
   "system": "Checkout",
   "source": "examples/checkout-spec.md",
-  "mode": "spec",
   "params": {
     "cart": {
       "type": "endpoint",

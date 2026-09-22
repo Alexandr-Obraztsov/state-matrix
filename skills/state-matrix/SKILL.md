@@ -1,12 +1,15 @@
 ---
 name: state-matrix
-description: Use when the user hands over a spec or points at a file and asks to enumerate all system states, build a state matrix, find uncovered cases, or review a spec for missed combinations. Walks the user through gated stages — parameters, states, rules, matrix — asking for approval at each, and reports which combinations nobody described. Not a test generator: it finds holes, contradictions and dead states.
+description: Use when the user hands over a specification and asks to enumerate all system states, build a state matrix, find uncovered cases, or review the spec for missed combinations. Works from specifications, not source code. Walks the user through gated stages — parameters, states, rules, matrix — asking for approval at each, and reports which combinations the spec never describes. Not a test generator: it finds holes, contradictions and dead states.
 ---
 
 # State Matrix
 
-Разбирает спецификацию (или код) на входные параметры, их значения и состояния
-системы, сворачивает матрицу по правилам из спеки и показывает, о чём спека молчит.
+Разбирает **спецификацию** на входные параметры, их значения и состояния системы,
+сворачивает матрицу по правилам из спеки и показывает, о чём спека молчит.
+
+Инструмент работает только со спеками. Кода он не читает и не парсит: если
+источник истины — реализация, матрица зафиксирует текущие баги как норму.
 
 ## Три железных правила
 
@@ -40,11 +43,15 @@ description: Use when the user hands over a spec or points at a file and asks to
 
 ## Этап 0. Завести модель
 
-**`sm_init`** — `model`, `system`, `source`, `mode`.
-`mode: spec` — разбор спецификации, `mode: code` — разбор существующего кода.
+**`sm_init`** — `model`, `system`, `source` (путь к спецификации).
 
-Для кода дополнительно **`sm_extract`**: каждый кандидат из вывода обязан стать
-либо параметром, либо уйти в **`sm_exclude`** с причиной.
+Прочитай спеку целиком и выпиши все входные параметры **до** того, как начнёшь
+их добавлять. Полноту списка машина проверить не может — её подтверждает человек
+на первых воротах, поэтому список должен быть исчерпывающим, а не первым пришедшим
+в голову.
+
+Упомянутое в спеке, но не являющееся параметром, отправляй в **`sm_exclude`**
+с причиной — так видно, что оно рассмотрено, а не забыто.
 
 ## Этап 1. Параметры и их значения
 
@@ -68,7 +75,6 @@ description: Use when the user hands over a spec or points at a file and asks to
 |---|---|
 | схема или тип | брать как есть, это доказательство |
 | спека | цитировать, ссылку в `--from` |
-| код (в режиме `spec`) | **не ответ**, а новый вопрос: «код делает так, спека молчит — намеренно?» |
 | ничего | **сказать пользователю, что источника нет, и спросить** |
 
 Не пиши `неизвестно` молча. `неизвестно` допустимо, только если человек ответил,
@@ -186,6 +192,8 @@ viewport     enum       mobile/tablet/desktop     ← нет в спеке, сп
 
 ## Когда отказываться
 
+- Дали код, а не спеку: скажи, что читаешь только спецификации. Модель по коду
+  зафиксировала бы текущее поведение как правильное — включая баги.
 - Цель — документ на десяток независимых подсистем: предложи разбиение.
 - Проблема в порядке событий, времени или гонках: матрица этого не ловит,
   скажи прямо и предложи property-based тесты.

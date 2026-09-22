@@ -47,7 +47,7 @@ class T(unittest.TestCase):
             m = os.path.join(d, "X.states.json")
             out, _ = talk([INIT,
                            call("sm_init", {"model": m, "system": "X",
-                                            "source": "a.ts", "mode": "code"}, 2),
+                                            "source": "spec.md"}, 2),
                            call("sm_param_add", {"model": m, "name": "n", "type": "number",
                                                  "values": ["a"], "from": "a.ts:1",
                                                  "answers": []}, 3)])
@@ -64,7 +64,7 @@ class T(unittest.TestCase):
             ans = [f"{q['id']}=неизвестно" for q in qs]
             out, err = talk([INIT,
                              call("sm_init", {"model": m, "system": "X",
-                                              "source": "a.ts", "mode": "code"}, 2),
+                                              "source": "spec.md"}, 2),
                              call("sm_catalog", {"model": m, "name": "amount",
                                                  "type": "number"}, 3),
                              call("sm_param_add", {"model": m, "name": "amount",
@@ -75,11 +75,6 @@ class T(unittest.TestCase):
             for r in out[1:]:
                 self.assertFalse(r["result"].get("isError"), r["result"]["content"][0]["text"])
             self.assertIn("amount", out[4]["result"]["content"][0]["text"])
-
-    def test_extract_tool(self):
-        out, _ = talk([INIT, call("sm_extract",
-                                  {"target": os.path.join(R, "scripts", "store.py")}, 2)])
-        self.assertFalse(out[1]["result"].get("isError"))
 
     def test_unknown_tool_is_error(self):
         out, _ = talk([INIT, call("sm_nope", {}, 2)])

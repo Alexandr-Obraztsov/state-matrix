@@ -23,7 +23,7 @@ class T(unittest.TestCase):
     def setUp(self):
         self.d = tempfile.mkdtemp()
         self.m = os.path.join(self.d, "X.states.json")
-        run("init", self.m, "--system", "X", "--source", "a.ts", "--mode", "code")
+        run("init", self.m, "--system", "X", "--source", "spec.md")
 
     def test_init_creates_model(self):
         self.assertEqual(json.load(open(self.m))["system"], "X")

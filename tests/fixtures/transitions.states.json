@@ -1,7 +1,6 @@
 {
-  "system": "checkout-widget",
-  "source": "src/mfe/checkout/Checkout.tsx",
-  "mode": "code",
+  "system": "Фикстура: переходы и достижимость",
+  "source": "tests/fixtures/transitions.md",
   "params": {
     "cart": {
       "type": "endpoint",
