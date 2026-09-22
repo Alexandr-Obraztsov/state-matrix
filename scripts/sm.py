@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import store
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NOT_FOUND = "не выяснено"
 DEFAULT_CATALOG = os.path.join(ROOT, "catalog", "default.json")
 
 
@@ -146,9 +147,10 @@ def cmd_show(a):
         if p.get("desc"):
             print(f"      {p['desc']}")
         print(f"      источник: {p.get('from','—')}")
-        unk = [k for k, v in (p.get("answers") or {}).items() if str(v).lower() == "неизвестно"]
+        unk = [k for k, v in (p.get("answers") or {}).items()
+               if str(v).lower() in (NOT_FOUND, "неизвестно")]
         if unk:
-            print(f"      ответ «неизвестно»: {', '.join(unk)}")
+            print(f"      не выяснено: {', '.join(unk)}")
     if m.get("excluded"):
         print(f"\nисключено ({len(m['excluded'])}): " + ", ".join(m["excluded"]))
     C = m.get("constraints") or []
@@ -261,6 +263,11 @@ def cmd_catalog_list(a):
     cat = catalogs(os.path.dirname(a.model or ".") or ".")
     if a.type:
         cat = [c for c in cat if a.type in (c.get("matches") or {}).get("types", [])]
+    if not cat:
+        print("Корзина пуста. Типы заводятся по мере разбора спеки: sm.py catalog-new")
+        print("Дефолтная корзина намеренно пустая — вопросы должны отражать "
+              "твою предметную область, а не общие догадки.")
+        return
     print(f"{len(cat)} типов параметров"
           + (f" с типом «{a.type}»" if a.type else "") + ":\n")
     for c in cat:
@@ -395,8 +402,14 @@ def cmd_catalog(a):
             print(f"      обычно это: {names}")
         print(f"\nпередай выбор в param add: --catalog <id>")
         print(f"ничего не подходит — заведи свою: sm.py catalog-new")
+    elif cat:
+        print("\nСОВПАДЕНИЙ НЕТ — заведи тип: sm.py catalog-new")
     else:
-        print("\nСОВПАДЕНИЙ НЕТ — семантика новая, заведи её: sm.py catalog-new")
+        print("\nКОРЗИНА ПУСТА. Первый параметр такого вида — заведи для него тип:")
+        print("  sm.py catalog-new <модель> --id <id> --title <название> --desc <описание>")
+        print("  --type <тип> --questions \"id=вопрос?|вариант|вариант\" ...")
+        print("\nВопросы должны быть такими, чтобы ответ на них порождал значения"
+              " параметра или его исход. Вопрос без такого следствия не нужен.")
 
     qs = (hit or {}).get("questions") or []
     if hit:
@@ -411,8 +424,8 @@ def cmd_catalog(a):
         if qs[0].get("options"):
             print(f"  варианты: {' | '.join(qs[0]['options'])}")
         print(f"\nостальные и их варианты: sm.py catalog-get {a.model} {(hit or {}).get('id')}")
-    else:
-        print("  (у этого типа вопросов нет)")
+    elif hit:
+        print("  (у этого типа вопросов нет — добавь их через catalog-edit)")
 
     L["lookups"][a.name] = {"catalog": (hit or {}).get("id"),
                             "questions": [q["id"] for q in qs],
@@ -420,7 +433,7 @@ def cmd_catalog(a):
                                         for c in loose} if not exact else {},
                             "at": datetime.datetime.now().isoformat(timespec="seconds")}
     save_ledger(a.model, L)
-    if exact or not loose:
+    if hit:
         print(f"\nзапрос записан; дальше: sm.py param add {a.model} --name {a.name} …")
 
 
@@ -442,11 +455,18 @@ def cmd_param_add(a):
         look = dict(look)
         look["catalog"] = a.catalog
         look["questions"] = choices.get(a.catalog, look["questions"])
+    if not look.get("catalog"):
+        die(f"для «{a.name}» не выбран тип параметра",
+            "корзина пуста или ничего не подошло — заведи тип командой catalog-new: "
+            "нужны название, описание и вопросы, на которые этот тип заставляет ответить")
+    if not look["questions"]:
+        die(f"у типа «{look['catalog']}» нет ни одного вопроса",
+            "тип без вопросов бесполезен: он ничего не заставляет выяснить. "
+            "добавь вопросы через catalog-edit --add-questions")
     ans = dict(x.split("=", 1) for x in (a.answer or []))
-    missing = [q for q in look["questions"] if q not in ans]
-    if missing:
-        die(f"нет ответов на вопросы семантики: {', '.join(missing)}",
-            "ответить: -a <вопрос>=\"…\" по каждому, либо -a <вопрос>=неизвестно")
+    unknown = [q for q in look["questions"] if q not in ans]
+    for q in unknown:
+        ans[q] = NOT_FOUND
     if not a.frm:
         die("не указан --from", "источник значений обязателен: file:line")
     if not a.values:
@@ -478,6 +498,9 @@ def cmd_param_add(a):
     if extra:
         print(f"  объединено: {len(a.all_values)} значений → {len(a.values)} классов")
         print(f"  основание: {a.grouping}")
+    if unknown:
+        print(f"  НЕ ВЫЯСНЕНО ({len(unknown)}): {', '.join(unknown)}")
+        print(f"  попадёт в отчёт; если это важно для значений — спроси пользователя")
     print(f"параметр «{a.name}» добавлен: {len(a.values)} значений"
           f"{', ' + str(len(a.special)) + ' вне матрицы' if a.special else ''}"
           f"{', окружение' if a.env else ''}")

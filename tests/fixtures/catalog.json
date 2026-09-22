@@ -1,0 +1,135 @@
+[
+  {
+    "id": "http_endpoint",
+    "title": "http_endpoint",
+    "desc": "тип для фикстуры",
+    "matches": {
+      "names": [
+        "cart"
+      ],
+      "types": [
+        "endpoint"
+      ]
+    },
+    "questions": [
+      {
+        "id": "codes",
+        "ask": "codes?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "empty",
+        "ask": "empty?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "partial",
+        "ask": "partial?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "timeout",
+        "ask": "timeout?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "auth",
+        "ask": "auth?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "late",
+        "ask": "late?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "order",
+        "ask": "order?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "retry",
+        "ask": "retry?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      }
+    ],
+    "values": [
+      "pending",
+      "ok",
+      "ok_empty",
+      "error"
+    ]
+  },
+  {
+    "id": "money_amount",
+    "title": "money_amount",
+    "desc": "тип для фикстуры",
+    "matches": {
+      "names": [
+        "amount"
+      ],
+      "types": [
+        "number"
+      ]
+    },
+    "questions": [
+      {
+        "id": "unit",
+        "ask": "unit?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "zero",
+        "ask": "zero?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "negative",
+        "ask": "negative?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "max",
+        "ask": "max?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      },
+      {
+        "id": "rounding",
+        "ask": "rounding?",
+        "options": [
+          "в спеке не сказано"
+        ]
+      }
+    ],
+    "values": [
+      "zero",
+      "min_unit",
+      "typical",
+      "over_max"
+    ]
+  }
+]

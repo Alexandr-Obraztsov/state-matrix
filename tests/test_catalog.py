@@ -3,13 +3,24 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import store
 
 CAT = os.path.join(os.path.dirname(__file__), "..", "catalog", "default.json")
+SAMPLE = os.path.join(os.path.dirname(__file__), "..", "examples", "catalog.json")
+
+
+class Default(unittest.TestCase):
+    def test_default_catalog_is_empty(self):
+        """Дефолтная корзина пуста намеренно: вопросы должны отражать
+        предметную область проекта, а не общие догадки."""
+        self.assertEqual(store.load(CAT), [],
+                         "в дефолтной корзине не должно быть типов")
 
 
 class T(unittest.TestCase):
-    def setUp(self):
-        self.c = store.load(CAT)
+    """Структурные требования проверяются на корзине-образце."""
 
-    def test_fifteen_or_more(self):
+    def setUp(self):
+        self.c = store.load(SAMPLE)
+
+    def test_sample_is_not_empty(self):
         self.assertGreaterEqual(len(self.c), 15)
 
     def test_required_keys(self):
@@ -56,7 +67,7 @@ class T(unittest.TestCase):
 class NoOverlap(unittest.TestCase):
     def test_names_do_not_collide(self):
         """Имя в двух семантиках — параметр уйдёт не в ту корзину."""
-        c = store.load(CAT)
+        c = store.load(SAMPLE)
         seen, dupes = {}, []
         for e in c:
             for n in e["matches"].get("names", []):
@@ -84,56 +95,91 @@ class Learning(unittest.TestCase):
         return r.stdout + r.stderr
 
     def test_every_question_has_options(self):
-        for e in store.load(CAT):
+        for e in store.load(SAMPLE):
             for q in e["questions"]:
                 self.assertTrue(q.get("options"), f"{e['id']}/{q['id']}: нет вариантов")
                 self.assertEqual(q["options"][-1], "в спеке не сказано",
                                  f"{e['id']}/{q['id']}: последний вариант обязателен")
 
     def test_every_type_has_title_and_desc(self):
-        for e in store.load(CAT):
+        for e in store.load(SAMPLE):
             self.assertTrue(e.get("title"), f"{e['id']}: нет названия")
             self.assertTrue(e.get("desc"), f"{e['id']}: нет описания")
 
+    def make_type(self):
+        self.sm_run("catalog-new", self.m, "--id", "api", "--title", "Обращение к сервису",
+                    "--desc", "Запрос к API как источник данных.", "--type", "endpoint",
+                    "--names", "request",
+                    "--questions", "codes=какие коды описаны?|только успех|все",
+                    "--values", "ok", "error")
+
+    def test_empty_catalog_tells_how_to_start(self):
+        out = self.sm_run("catalog-list", "--model", self.m)
+        self.assertIn("Корзина пуста", out)
+
+    def test_param_refused_while_catalog_empty(self):
+        self.sm_run("catalog", self.m, "x", "--type", "number")
+        out = self.sm_run("param", "add", self.m, "--name", "x", "--type", "number",
+                          "--values", "a", "--all-values", "a", "--from", "s.md:§1",
+                          expect=2)
+        self.assertIn("не выбран тип", out)
+
     def test_list_hides_questions(self):
-        out = self.sm_run("catalog-list")
+        self.make_type()
+        out = self.sm_run("catalog-list", "--model", self.m)
         self.assertIn("Обращение к сервису", out)
-        self.assertNotIn("идемпотентен", out, "список не должен вываливать вопросы")
+        self.assertNotIn("какие коды описаны", out, "список не должен вываливать вопросы")
 
     def test_get_shows_questions_with_options(self):
-        out = self.sm_run("catalog-get", self.m, "http_endpoint")
-        self.assertIn("идемпотентен", out)
+        self.make_type()
+        out = self.sm_run("catalog-get", self.m, "api")
+        self.assertIn("какие коды описаны", out)
         self.assertIn("варианты:", out)
 
     def test_edit_adds_question_and_persists(self):
-        before = self.sm_run("catalog-get", self.m, "http_endpoint")
-        self.sm_run("catalog-edit", self.m, "http_endpoint",
-                 "--add-questions", "cache=кэшируется ли ответ?|да|нет")
-        after = self.sm_run("catalog-get", self.m, "http_endpoint")
+        self.make_type()
+        before = self.sm_run("catalog-get", self.m, "api")
+        self.sm_run("catalog-edit", self.m, "api",
+                    "--add-questions", "cache=кэшируется ли ответ?|да|нет")
+        after = self.sm_run("catalog-get", self.m, "api")
         self.assertNotIn("кэшируется", before)
         self.assertIn("кэшируется", after)
-        proj = store.load(os.path.join(self.d, ".states", "catalog.json"))
-        self.assertEqual(proj[0]["id"], "http_endpoint")
-        self.assertEqual(proj[0]["questions"][0]["options"][-1], "в спеке не сказано")
 
-    def test_edit_does_not_touch_default_catalog(self):
-        self.sm_run("catalog-edit", self.m, "http_endpoint",
-                 "--add-questions", "cache=кэшируется ли ответ?|да|нет")
-        d = store.load(CAT)
-        ep = next(c for c in d if c["id"] == "http_endpoint")
-        self.assertFalse(any(q["id"] == "cache" for q in ep["questions"]),
+    def test_default_catalog_never_written(self):
+        self.make_type()
+        self.sm_run("catalog-edit", self.m, "api",
+                    "--add-questions", "cache=кэшируется ли ответ?|да|нет")
+        self.assertEqual(store.load(CAT), [],
                          "дефолтная корзина плагина правиться не должна")
 
     def test_added_name_makes_type_findable(self):
+        self.make_type()
         out = self.sm_run("catalog", self.m, "cart", "--type", "endpoint")
-        self.assertIn("ВЫБЕРИ САМ", out)
-        self.sm_run("catalog-edit", self.m, "http_endpoint", "--add-names", "cart")
+        self.assertNotIn("ТОЧНОЕ СОВПАДЕНИЕ", out)
+        self.sm_run("catalog-edit", self.m, "api", "--add-names", "cart")
         out = self.sm_run("catalog", self.m, "cart", "--type", "endpoint")
         self.assertIn("ТОЧНОЕ СОВПАДЕНИЕ", out)
 
     def test_duplicate_question_refused(self):
-        self.sm_run("catalog-edit", self.m, "http_endpoint",
-                 "--add-questions", "retry=повтор?|да", expect=2)
+        self.make_type()
+        self.sm_run("catalog-edit", self.m, "api",
+                    "--add-questions", "codes=коды?|да", expect=2)
+
+    def test_type_without_questions_cannot_be_used(self):
+        """Тип без вопросов ничего не заставляет выяснить — параметр по нему не добавить."""
+        self.sm_run("catalog-new", self.m, "--id", "bare", "--title", "Пустой",
+                    "--desc", "Без вопросов", "--type", "enum", "--names", "z",
+                    "--questions", "q=вопрос?|да", "--values", "a")
+        import json as _j
+        p = os.path.join(self.d, ".states", "catalog.json")
+        cur = _j.load(open(p, encoding="utf-8"))
+        cur[0]["questions"] = []
+        _j.dump(cur, open(p, "w", encoding="utf-8"), ensure_ascii=False)
+        self.sm_run("catalog", self.m, "z", "--type", "enum")
+        out = self.sm_run("param", "add", self.m, "--name", "z", "--type", "enum",
+                          "--values", "a", "--all-values", "a", "--from", "s.md:§1",
+                          expect=2)
+        self.assertIn("нет ни одного вопроса", out)
 
     def test_new_type_requires_title_and_desc(self):
         out = self.sm_run("catalog-new", self.m, "--id", "x", "--type", "enum",

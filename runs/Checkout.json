@@ -1,7 +1,7 @@
 {
   "system": "Checkout",
   "source": "examples/checkout-spec.md",
-  "generated_at": "2026-09-22T22:52:11",
+  "generated_at": "2026-09-22T23:09:16",
   "model_hash": "28beb095f264",
   "ceiling": 100,
   "params": {

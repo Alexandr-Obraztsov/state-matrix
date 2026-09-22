@@ -18,22 +18,50 @@ class T(unittest.TestCase):
             store.save(p, model)
             return validate.check(p)
 
-    def test_param_without_answers_is_error(self):
-        e, w = self.check(m(params={"amount": {"type": "number", "catalog": "money_amount",
-                                               "values": ["zero"], "from": "a.ts:1"}}))
-        self.assertTrue(any("ответа" in x for x in e), e)
+    def _with_catalog(self, d, params):
+        store.save(os.path.join(d, "catalog.json"),
+                   [{"id": "money_amount", "title": "Сумма", "desc": "…",
+                     "matches": {"names": ["amount"], "types": ["number"]},
+                     "questions": [{"id": "unit", "ask": "единицы?",
+                                    "options": ["в спеке не сказано"]}],
+                     "values": ["zero"]}])
+        p = os.path.join(d, "m.states.json")
+        store.save(p, m(params=params))
+        return validate.check(p)
+
+    def test_question_ignored_entirely_is_error(self):
+        """Вопрос, которого вообще нет в answers, — признак обхода тулов."""
+        with tempfile.TemporaryDirectory() as d:
+            e, w = self._with_catalog(d, {"amount": {
+                "type": "number", "catalog": "money_amount", "values": ["zero"],
+                "all_values": ["zero"], "from": "a.ts:1"}})
+        self.assertTrue(any("не учтён" in x for x in e), e)
+
+    def test_not_found_answer_is_warning_not_error(self):
+        """«Не выяснено» — замечание в отчёт, а не отказ."""
+        with tempfile.TemporaryDirectory() as d:
+            e, w = self._with_catalog(d, {"amount": {
+                "type": "number", "catalog": "money_amount", "values": ["zero"],
+                "all_values": ["zero"], "from": "a.ts:1",
+                "answers": {"unit": "не выяснено"}}})
+        self.assertEqual(e, [])
+        self.assertTrue(any("не выяснено" in x for x in w), w)
 
     def test_error_names_the_bypass(self):
-        e, w = self.check(m(params={"amount": {"type": "number", "catalog": "money_amount",
-                                               "values": ["zero"], "from": "a.ts:1"}}))
+        with tempfile.TemporaryDirectory() as d:
+            e, w = self._with_catalog(d, {"amount": {
+                "type": "number", "catalog": "money_amount", "values": ["zero"],
+                "all_values": ["zero"], "from": "a.ts:1"}})
         self.assertTrue(any("обход" in x for x in e), e)
 
     def test_param_with_all_answers_ok(self):
-        qs = next(c for c in store.load(CAT) if c["id"] == "money_amount")["questions"]
-        e, w = self.check(m(params={"amount": {
-            "type": "number", "catalog": "money_amount", "values": ["zero"],
-            "from": "a.ts:1", "answers": {q["id"]: "неизвестно" for q in qs}}}))
-        self.assertEqual([x for x in e if "ответа" in x], [])
+        with tempfile.TemporaryDirectory() as d:
+            e, w = self._with_catalog(d, {"amount": {
+                "type": "number", "catalog": "money_amount", "values": ["zero"],
+                "all_values": ["zero"], "from": "a.ts:1",
+                "answers": {"unit": "копейки — §3"}}})
+        self.assertEqual(e, [])
+        self.assertEqual(w, [])
 
     def test_param_without_catalog_still_needs_from(self):
         e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"], "answers": {}}}))

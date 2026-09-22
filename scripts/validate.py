@@ -46,8 +46,11 @@ def check(path):
                 ans = p.get("answers") or {}
                 for q in CAT[cid]["questions"]:
                     if q["id"] not in ans:
-                        errs.append(f"{n}: нет ответа на вопрос «{q['id']}» семантики {cid}"
+                        errs.append(f"{n}: вопрос «{q['id']}» типа {cid} вообще не учтён"
                                     " — параметр добавлен в обход sm.py")
+                    elif str(ans[q["id"]]).lower() in ("не выяснено", "неизвестно"):
+                        warns.append(f"{n}: «{q['id']}» не выяснено"
+                                     f" — {q['ask']}")
         if p.get("env") and (m.get("transitions") or []):
             for t in m["transitions"]:
                 if n in (t.get("set") or {}):

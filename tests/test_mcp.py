@@ -58,13 +58,16 @@ class T(unittest.TestCase):
     def test_full_happy_path(self):
         with tempfile.TemporaryDirectory() as d:
             m = os.path.join(d, "X.states.json")
-            cat = json.load(open(os.path.join(R, "catalog", "default.json"),
-                                 encoding="utf-8"))
-            qs = next(c for c in cat if c["id"] == "money_amount")["questions"]
-            ans = [f"{q['id']}=неизвестно" for q in qs]
+            ans = ["unit=копейки"]
             out, err = talk([INIT,
                              call("sm_init", {"model": m, "system": "X",
                                               "source": "spec.md"}, 2),
+                             call("sm_catalog_new", {
+                                 "model": m, "id": "money", "title": "Сумма",
+                                 "desc": "Денежная сумма.", "type": "number",
+                                 "names": ["amount"],
+                                 "questions": ["unit=в каких единицах?|копейки|рубли"],
+                                 "values": ["zero", "typical"]}, 9),
                              call("sm_catalog", {"model": m, "name": "amount",
                                                  "type": "number"}, 3),
                              call("sm_param_add", {"model": m, "name": "amount",
@@ -75,7 +78,7 @@ class T(unittest.TestCase):
                              call("sm_show", {"model": m}, 5)])
             for r in out[1:]:
                 self.assertFalse(r["result"].get("isError"), r["result"]["content"][0]["text"])
-            self.assertIn("amount", out[4]["result"]["content"][0]["text"])
+            self.assertIn("amount", out[-1]["result"]["content"][0]["text"])
 
     def test_unknown_tool_is_error(self):
         out, _ = talk([INIT, call("sm_nope", {}, 2)])
@@ -101,25 +104,28 @@ class StreamPurity(unittest.TestCase):
             os.makedirs(os.path.dirname(m))
             import shutil
             shutil.copy(spec, os.path.join(d, "spec.md"))
-            cat = json.load(open(os.path.join(R, "catalog", "default.json"), encoding="utf-8"))
-            qs = next(c for c in cat if c["id"] == "money_amount")["questions"]
             out, err = talk([
                 INIT,
                 call("sm_init", {"model": m, "system": "D", "source": "spec.md"}, 2),
+                call("sm_catalog_new", {
+                    "model": m, "id": "money", "title": "Сумма", "desc": "Сумма.",
+                    "type": "number", "names": ["amount"],
+                    "questions": ["unit=в каких единицах?|копейки"],
+                    "values": ["zero", "typical"]}, 7),
                 call("sm_catalog", {"model": m, "name": "amount", "type": "number"}, 3),
                 call("sm_param_add", {"model": m, "name": "amount", "type": "number",
                                       "values": ["zero", "typical"],
                                       "all_values": ["zero", "typical"],
                                       "from": os.path.join(d, "spec.md") + ":§3",
-                                      "answers": [f"{q['id']}=неизвестно" for q in qs]}, 4),
+                                      "answers": ["unit=копейки"]}, 4),
                 call("sm_state_add", {"model": m, "name": "Любое", "when": [],
                                       "evidence": os.path.join(d, "spec.md") + ":§3"}, 5),
                 call("sm_build", {"model": m, "root": d}, 6),
             ])
             self.assertEqual(err.strip(), "", "сервер не должен писать в stderr")
-            self.assertEqual(len(out), 6, "лишние или потерянные ответы")
+            self.assertEqual(len(out), 7, "лишние или потерянные ответы")
             for r in out:
                 self.assertIn("result", r)
-            self.assertFalse(out[5]["result"].get("isError"),
-                             out[5]["result"]["content"][0]["text"])
-            self.assertIn("## Матрица", out[5]["result"]["content"][0]["text"])
+            last = out[-1]["result"]
+            self.assertFalse(last.get("isError"), last["content"][0]["text"])
+            self.assertIn("## Матрица", last["content"][0]["text"])

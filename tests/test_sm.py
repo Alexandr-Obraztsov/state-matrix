@@ -2,7 +2,8 @@ import json, os, subprocess, sys, tempfile, unittest
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 SM = os.path.join(ROOT, "scripts", "sm.py")
-CAT = json.load(open(os.path.join(ROOT, "catalog", "default.json"), encoding="utf-8"))
+MONEY_Q = [("unit", "в каких единицах?|копейки|рубли"),
+           ("zero", "нулевая сумма осмысленна?|да|нет")]
 
 
 def run(*a, expect=0):
@@ -11,33 +12,39 @@ def run(*a, expect=0):
     return r.stdout + r.stderr
 
 
-def answers_for(cid):
-    e = next(c for c in CAT if c["id"] == cid)
+def answers_for(_cid=None):
     out = []
-    for q in e["questions"]:
-        out += ["-a", f"{q['id']}=неизвестно"]
+    for qid, _ in MONEY_Q:
+        out += ["-a", f"{qid}=неизвестно"]
     return out
 
 
 class T(unittest.TestCase):
     def setUp(self):
         self.d = tempfile.mkdtemp()
-        self.m = os.path.join(self.d, "X.states.json")
+        os.makedirs(os.path.join(self.d, ".states", "models"))
+        self.m = os.path.join(self.d, ".states", "models", "X.states.json")
         run("init", self.m, "--system", "X", "--source", "spec.md")
+        # корзина по умолчанию пуста — тип заводим сами
+        run("catalog-new", self.m, "--id", "money_amount", "--title", "Сумма",
+            "--desc", "Денежная сумма заказа.", "--type", "number",
+            "--names", "amount", "price",
+            "--questions", *[f"{q}={a}" for q, a in MONEY_Q],
+            "--values", "zero", "typical")
 
     def test_init_creates_model(self):
         self.assertEqual(json.load(open(self.m))["system"], "X")
 
     def test_param_without_catalog_refused(self):
-        out = run("param", "add", self.m, "--name", "n", "--type", "number",
+        out = run("param", "add", self.m, "--name", "amount", "--type", "number",
                   "--values", "a", "--from", "a.ts:1", expect=2)
         self.assertIn("корзина", out)
 
-    def test_param_without_answers_refused(self):
+    def test_param_without_all_values_refused(self):
         run("catalog", self.m, "amount", "--type", "number")
         out = run("param", "add", self.m, "--name", "amount", "--type", "number",
                   "--values", "zero", "--from", "a.ts:1", expect=2)
-        self.assertIn("нет ответов", out)
+        self.assertIn("--all-values", out)
 
     def test_param_without_from_refused(self):
         run("catalog", self.m, "amount", "--type", "number")
@@ -52,8 +59,7 @@ class T(unittest.TestCase):
             "--values", "zero", "typical", "--all-values", "zero", "typical",
             "--from", "a.ts:1", *answers_for("money_amount"))
         p = json.load(open(self.m))["params"]["amount"]
-        self.assertEqual(len(p["answers"]),
-                         len(next(c for c in CAT if c["id"] == "money_amount")["questions"]))
+        self.assertEqual(len(p["answers"]), len(MONEY_Q))
         self.assertEqual(p["catalog"], "money_amount")
 
     def _amount(self):
@@ -97,7 +103,7 @@ class T(unittest.TestCase):
 
     def test_answer_writes_file(self):
         run("answer", self.m, "c1", "proven")
-        ans = json.load(open(os.path.join(self.d, "answers.json")))
+        ans = json.load(open(os.path.join(self.d, ".states", "models", "answers.json")))
         self.assertEqual(ans["constraints"]["c1"], "proven")
 
     def test_transition_add(self):
@@ -107,6 +113,13 @@ class T(unittest.TestCase):
         self.assertEqual(json.load(open(self.m))["transitions"][0]["event"], "pay")
 
     def test_catalog_list(self):
-        out = run("catalog-list")
+        out = run("catalog-list", "--model", self.m)
         self.assertIn("money_amount", out)
-        self.assertIn("http_endpoint", out)
+        self.assertIn("Сумма", out)
+
+    def test_catalog_empty_by_default(self):
+        d2 = tempfile.mkdtemp()
+        os.makedirs(os.path.join(d2, ".states", "models"))
+        m2 = os.path.join(d2, ".states", "models", "Y.states.json")
+        run("init", m2, "--system", "Y", "--source", "spec.md")
+        self.assertIn("Корзина пуста", run("catalog-list", "--model", m2))

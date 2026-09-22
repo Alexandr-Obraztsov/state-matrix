@@ -44,6 +44,10 @@ def main():
         if p.get("special"):
             L.append(f"  вне матрицы: {vals(p['special'])}")
         L.append(f"  источник: {p.get('from','—')}")
+        unk = [k for k, v in (p.get("answers") or {}).items()
+               if str(v).lower() in ("не выяснено", "неизвестно")]
+        if unk:
+            L.append(f"  **не выяснено:** {', '.join(unk)}")
         L.append("")
     if d.get("excluded"):
         L.append("**Исключено из модели:**")
