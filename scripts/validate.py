@@ -101,7 +101,7 @@ def check(path, root="."):
 
     states = m.get("states") or []
     if not states:
-        warns.append("нет ни одного состояния — матрица будет без исходов")
+        warns.append("нет ни одного состояния — матрицу некуда раскладывать")
     seen = set()
     for i, st in enumerate(states):
         w = f"состояние «{st.get('name','?')}»"
@@ -116,10 +116,10 @@ def check(path, root="."):
         if st.get("name") in seen:
             errs.append(f"{w}: имя повторяется")
         seen.add(st.get("name"))
-        for k, v in (st.get("when") or {}).items():
-            known(k, v, w)
-        if not (st.get("when") or {}) and i < len(states) - 1:
-            errs.append(f"{w}: условия нет, но оно не последнее — перекроет всё ниже")
+
+    for key, name in (m.get("assignments") or {}).items():
+        if name not in seen:
+            errs.append(f"привязка строки {key}: состояния «{name}» нет")
 
     return errs, warns
 

@@ -25,8 +25,8 @@ class T(unittest.TestCase):
 
     def test_skill_mentions_pipeline_order(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"), encoding="utf-8").read()
-        for step in ("sm_init", "sm_param_add", "sm_params", "sm_param_values",
-                     "sm_state_add", "sm_states", "sm_rule_add", "sm_build"):
+        for step in ("sm_init", "sm_param_add", "sm_state_add", "sm_rule_add",
+                     "sm_build", "sm_assign"):
             self.assertIn(step, s)
 
     def test_skill_states_the_ceiling(self):
@@ -84,6 +84,6 @@ class T(unittest.TestCase):
 
     def test_gate_tools_say_output_is_invisible(self):
         s = open(os.path.join(R, "scripts", "mcp_server.py"), encoding="utf-8").read()
-        for t in ("sm_params", "sm_states", "sm_show", "sm_build"):
+        for t in ("sm_build",):
             i = s.index(f'tool("{t}"')
             self.assertIn("НЕ ВИДИТ", s[i:i + 900], t)

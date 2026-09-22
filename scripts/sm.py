@@ -45,6 +45,12 @@ def pairs(spec, P):
     return d
 
 
+def result_path(model):
+    return os.path.normpath(os.path.join(
+        os.path.dirname(model) or ".", "..", "runs",
+        os.path.basename(model).replace(".states.json", "") + ".json"))
+
+
 def ref_ok(text, model_path, root):
     return validate.check_ref(text, store.load(model_path).get("source", ""), root)
 
@@ -64,21 +70,44 @@ def cmd_init(a):
 # ---------- этап 1: перечень параметров ----------
 
 def cmd_param_add(a):
+    """Параметр целиком: описание, ссылка, все значения и объединение в классы."""
     if not a.desc:
         die("не указан --desc", "что это за вход — одной фразой")
     if not a.frm:
         die("не указан --from", "ссылка на место в спеке: docs/spec.md:§3")
+    if not a.all_values:
+        die("не указаны --all-values",
+            "перечисли ВСЕ значения из спеки, включая корнер-кейсы")
     m = load(a.model)
     ok, why = ref_ok(a.frm, a.model, a.root)
     if not ok:
         die(f"--from не подтверждается: {why}",
             "ссылка должна указывать на существующий раздел спеки")
+    values = a.values or list(a.all_values)
+    extra = [v for v in a.all_values if v not in values]
+    if extra and not a.grouping:
+        die(f"{len(a.all_values)} значений свёрнуто в {len(values)} классов без объяснения",
+            f"нужен --grouping: почему они дают один исход. вне классов: {', '.join(extra[:8])}")
     m.setdefault("params", {})
     if a.name in m["params"] and not a.force:
-        die(f"параметр «{a.name}» уже объявлен", "перезаписать: --force")
-    m["params"][a.name] = {"type": a.type, "desc": a.desc, "from": a.frm}
+        die(f"параметр «{a.name}» уже есть", "перезаписать: --force")
+    p = {"desc": a.desc, "from": a.frm,
+         "all_values": list(a.all_values), "values": values}
+    if a.grouping:
+        p["grouping"] = a.grouping
+    if a.special:
+        p["special"] = list(a.special)
+    m["params"][a.name] = p
     store.save(a.model, m)
-    print(f"«{a.name}» объявлен — параметров всего {len(m['params'])}")
+    if extra:
+        print(f"«{a.name}»: {len(a.all_values)} значений → {len(values)} классов")
+        print(f"  основание: {a.grouping}")
+    else:
+        print(f"«{a.name}»: {len(values)} значений")
+    if a.special:
+        print(f"  вне матрицы, по одному: {', '.join(a.special)}")
+    print(f"  параметров всего: {len(m['params'])}")
+
 
 
 def cmd_param_rm(a):
@@ -106,62 +135,15 @@ def cmd_exclude(a):
     print(f"«{a.name}» исключён: {a.reason}")
 
 
-def cmd_params(a):
-    m = load(a.model)
-    P = m.get("params") or {}
-    if not P:
-        die("параметров пока нет", f"объявить: sm.py param add {a.model} --name …")
-    w = max(len(n) for n in P)
-    print(f"{m.get('system','—')} — параметров {len(P)}\n")
-    for n, p in P.items():
-        left = "" if p.get("values") else "   ← значения не заданы"
-        print(f"  {n:{w}}  {p.get('type','—'):9}{left}")
-        print(f"  {'':{w}}  {p.get('desc','')}")
-        print(f"  {'':{w}}  {p.get('from','—')}")
-    if m.get("excluded"):
-        print("\nисключено: " + "; ".join(f"{k} — {v}" for k, v in m["excluded"].items()))
-    left = [n for n, p in P.items() if not p.get("values")]
-    print(f"\nзначения заданы у {len(P) - len(left)} из {len(P)}"
-          + (f"; ждут: {', '.join(left)}" if left else ""))
-
 
 # ---------- этап 2: значения ----------
-
-def cmd_param_values(a):
-    m = load(a.model)
-    p = (m.get("params") or {}).get(a.name)
-    if p is None:
-        die(f"параметр «{a.name}» не объявлен",
-            f"сначала: sm.py param add {a.model} --name {a.name} …")
-    if not a.all_values:
-        die("не указаны --all-values",
-            "перечисли ВСЕ значения из спеки, включая корнер-кейсы")
-    values = a.values or list(a.all_values)
-    extra = [v for v in a.all_values if v not in values]
-    if extra and not a.grouping:
-        die(f"{len(a.all_values)} значений свёрнуто в {len(values)} классов без объяснения",
-            f"нужен --grouping: почему они дают один исход. вне классов: {', '.join(extra[:8])}")
-    p["all_values"] = list(a.all_values)
-    p["values"] = values
-    if a.grouping:
-        p["grouping"] = a.grouping
-    if a.special:
-        p["special"] = list(a.special)
-    store.save(a.model, m)
-    if extra:
-        print(f"«{a.name}»: {len(a.all_values)} значений → {len(values)} классов")
-        print(f"  основание: {a.grouping}")
-    else:
-        print(f"«{a.name}»: {len(values)} значений, объединений нет")
-    if a.special:
-        print(f"  вне матрицы, по одному: {', '.join(a.special)}")
-    left = [n for n, x in m["params"].items() if not x.get("values")]
-    print(f"  без значений осталось: {', '.join(left) if left else '—'}")
 
 
 # ---------- этап 3: состояния ----------
 
 def cmd_state_add(a):
+    """Состояние интерфейса: имя, что видно, ссылка. Условий нет — привязка
+    к строкам матрицы делается отдельно, после свёртки."""
     m = load(a.model)
     if not a.desc:
         die("нет --desc", "что пользователь видит в этом состоянии")
@@ -170,13 +152,14 @@ def cmd_state_add(a):
     ok, why = ref_ok(a.evidence, a.model, a.root)
     if not ok:
         die(f"--evidence не подтверждается: {why}",
-            "состояния без ссылки не бывает; если в спеке его нет — спроси пользователя")
-    when = pairs(a.when, m.get("params") or {})
+            "состояния без ссылки не бывает; нет в спеке — спроси пользователя")
+    if any(s["name"] == a.name for s in (m.get("states") or [])):
+        die(f"состояние «{a.name}» уже есть")
     m.setdefault("states", []).append(
-        {"name": a.name, "when": when, "desc": a.desc, "evidence": a.evidence})
+        {"name": a.name, "desc": a.desc, "evidence": a.evidence})
     store.save(a.model, m)
-    print(f"«{a.name}» добавлено — состояний всего {len(m['states'])}")
-    print(f"  когда: {when or 'всегда (запасное — только последним)'}")
+    print(f"«{a.name}» — состояний всего {len(m['states'])}")
+
 
 
 def cmd_state_rm(a):
@@ -185,25 +168,35 @@ def cmd_state_rm(a):
     m["states"] = [s for s in (m.get("states") or []) if s.get("name") != a.name]
     if len(m["states"]) == before:
         die(f"состояния «{a.name}» нет")
+    m["assignments"] = {k: v for k, v in (m.get("assignments") or {}).items()
+                        if v != a.name}
     store.save(a.model, m)
-    print(f"«{a.name}» убрано")
+    print(f"«{a.name}» убрано вместе с его привязками")
 
 
-def cmd_states(a):
+def cmd_assign(a):
+    """Привязать состояние к строкам матрицы по их номерам из последней сборки."""
     m = load(a.model)
-    S = m.get("states") or []
-    if not S:
-        die("состояний пока нет", UI_HINT)
-    print(f"{m.get('system','—')} — состояний {len(S)}"
-          "   (порядок значим: побеждает первое подходящее)\n")
-    for i, x in enumerate(S, 1):
-        w = " · ".join(f"{k} = {', '.join(v) if isinstance(v, list) else v}"
-                       for k, v in (x.get("when") or {}).items()) or "всегда"
-        print(f"  {i}. {x['name']}")
-        print(f"     когда: {w}")
-        print(f"     видно: {x.get('desc','')}")
-        print(f"     {x.get('evidence','—')}")
-    print(f"\n{UI_HINT}")
+    if not any(s["name"] == a.state for s in (m.get("states") or [])):
+        die(f"состояния «{a.state}» нет",
+            "сначала: sm.py state add … --name \"" + a.state + "\" --desc … --evidence …")
+    res = store.load(result_path(a.model))
+    if not res:
+        die("матрица ещё не собрана", f"сначала: sm.py build {a.model}")
+    by_id = {r["id"]: r["key"] for r in res["rows"]}
+    unknown = [r for r in a.rows if r not in by_id]
+    if unknown:
+        die(f"нет таких строк: {', '.join(unknown)}",
+            f"есть r000…r{len(res['rows'])-1:03d}; посмотреть: sm.py rows")
+    m.setdefault("assignments", {})
+    for rid in a.rows:
+        m["assignments"][by_id[rid]] = a.state
+    store.save(a.model, m)
+    left = sum(1 for r in res["rows"]
+               if r["id"] not in a.rows and not r["state"])
+    print(f"«{a.state}» ← {len(a.rows)} строк: {', '.join(a.rows)}")
+    print(f"  без состояния осталось примерно {left}; пересобери: sm.py build")
+
 
 
 # ---------- этап 4: правила и матрица ----------
@@ -250,13 +243,15 @@ def cmd_rule_rm(a):
 
 def table(cols, rows):
     w = {c: max([len(c)] + [len(str(r["values"][c])) for r in rows]) for c in cols}
-    ws = max([len("состояние")] + [len(r["state"] or "не определено") for r in rows])
-    out = ["  " + "  ".join(c.ljust(w[c]) for c in cols) + "  | " + "состояние".ljust(ws)
-           + " | что видно",
-           "  " + "  ".join("-" * w[c] for c in cols) + "--+-" + "-" * ws + "-+-" + "-" * 30]
+    ws = max([len("состояние")] + [len(r["state"] or "— НЕ НАЗНАЧЕНО —") for r in rows])
+    out = ["  " + "№".ljust(5) + "  ".join(c.ljust(w[c]) for c in cols)
+           + "  | " + "состояние".ljust(ws) + " | что видно",
+           "  " + "-" * 5 + "  ".join("-" * w[c] for c in cols)
+           + "--+-" + "-" * ws + "-+-" + "-" * 28]
     for r in rows:
-        out.append("  " + "  ".join(str(r["values"][c]).ljust(w[c]) for c in cols)
-                   + "  | " + (r["state"] or "НЕ ОПРЕДЕЛЕНО").ljust(ws)
+        out.append("  " + r["id"].ljust(5)
+                   + "  ".join(str(r["values"][c]).ljust(w[c]) for c in cols)
+                   + "  | " + (r["state"] or "— НЕ НАЗНАЧЕНО —").ljust(ws)
                    + " | " + (r.get("desc") or ""))
     return "\n".join(out)
 
@@ -270,9 +265,14 @@ def show_result(res):
     for st in res["states"]:
         print(f"  {st['rows']:3}  {st['name']}")
     if c["no_state"]:
-        print(f"  {c['no_state']:3}  ← НЕ ОПРЕДЕЛЕНО: разбери, sm.py rows … --no-state")
+        print(f"  {c['no_state']:3}  ← БЕЗ СОСТОЯНИЯ: назначь, sm.py assign … --rows r000 r001")
     print("\nМАТРИЦА")
     print(table(res["param_order"], res["rows"]))
+    if c["no_state"]:
+        ids = [r["id"] for r in res["rows"] if not r["state"]]
+        print(f"\nБЕЗ СОСТОЯНИЯ: {', '.join(ids)}")
+        print("  по каждой: назначить состояние, запретить комбинацию правилом"
+              " или признать дырой в спеке")
     if res["specials"]:
         print("\nВНЕ МАТРИЦЫ, проверяются по одному:")
         for x in res["specials"]:
@@ -285,10 +285,9 @@ def show_result(res):
 
 def cmd_build(a):
     m = load(a.model)
-    no_vals = [n for n, p in (m.get("params") or {}).items() if not p.get("values")]
-    if no_vals:
-        die(f"у параметров нет значений: {', '.join(no_vals)}",
-            "сначала param values по каждому")
+    if not (m.get("params") or {}):
+        die("в модели нет параметров",
+            f"объявить: sm.py param add {a.model} --name … --all-values …")
     if not (m.get("states") or []):
         die("нет ни одного состояния", "матрица без состояний — таблица без исходов. " + UI_HINT)
     errs, warns = validate.check(a.model, a.root)
@@ -299,17 +298,14 @@ def cmd_build(a):
             print(f"ОШИБКА: {x}", file=sys.stderr)
         die("модель не прошла проверку", "матрица не собрана")
     res = engine.build(m)
-    out = os.path.normpath(os.path.join(os.path.dirname(a.model) or ".", "..", "runs",
-                                        os.path.basename(a.model).replace(".states.json", "")
-                                        + ".json"))
-    store.save(out, res)
+    store.save(result_path(a.model), res)
     show_result(res)
 
 
 def cmd_rows(a):
-    res = store.load(a.result)
+    res = store.load(result_path(a.model))
     if not res:
-        die(f"нет {a.result}", "сначала: sm.py build <модель>")
+        die("матрица ещё не собрана", f"сначала: sm.py build {a.model}")
     rows = [r for r in res["rows"] if not r["state"]] if a.no_state else res["rows"]
     print(f"{len(rows)} строк из {len(res['rows'])}\n")
     for r in rows[:a.limit]:
@@ -318,42 +314,6 @@ def cmd_rows(a):
         if r["covers"] > 1:
             print(f"      покрывает {r['covers']} комбинаций")
 
-
-def cmd_show(a):
-    m = load(a.model)
-    print(f"{m.get('system','—')}   {m.get('source','—')}")
-    P = m.get("params") or {}
-    print(f"\nПАРАМЕТРЫ ({len(P)})")
-    for n, p in P.items():
-        print(f"\n  {n} — {p.get('type','—')}")
-        print(f"      {p.get('desc','')}")
-        av, vv = p.get("all_values") or [], p.get("values") or []
-        if not vv:
-            print("      значения не заданы")
-        elif len(av) != len(vv):
-            print(f"      все значения ({len(av)}): {', '.join(map(str, av))}")
-            print(f"      классы ({len(vv)}): {', '.join(map(str, vv))}")
-            print(f"      объединены: {p.get('grouping','— без основания —')}")
-        else:
-            print(f"      значения: {', '.join(map(str, vv))}")
-        if p.get("special"):
-            print(f"      вне матрицы: {', '.join(map(str, p['special']))}")
-        print(f"      источник: {p.get('from','—')}")
-    if m.get("excluded"):
-        print(f"\nИСКЛЮЧЕНО ({len(m['excluded'])})")
-        for k, v in m["excluded"].items():
-            print(f"  {k} — {v}")
-    C = m.get("constraints") or []
-    print(f"\nПРАВИЛА ({len(C)})")
-    for c in C:
-        kind = "запрет" if "forbid" in c else "схлопывание"
-        print(f"  {c.get('id')}  {kind}: {c.get('desc') or c.get('evidence')}")
-        print(f"      {c.get('evidence')}")
-    S = m.get("states") or []
-    print(f"\nСОСТОЯНИЯ ({len(S)})")
-    for x in S:
-        w = ", ".join(f"{k}={v}" for k, v in (x.get("when") or {}).items()) or "всегда"
-        print(f"  {x['name']}: {w}")
 
 
 def main():
@@ -367,28 +327,29 @@ def main():
 
     p = sub.add_parser("param").add_subparsers(dest="x", required=True)
     pa = p.add_parser("add"); pa.add_argument("model")
-    pa.add_argument("--name", required=True); pa.add_argument("--type", required=True)
+    pa.add_argument("--name", required=True)
     pa.add_argument("--desc"); pa.add_argument("--from", dest="frm")
+    pa.add_argument("--all-values", nargs="+", dest="all_values")
+    pa.add_argument("--values", nargs="*"); pa.add_argument("--grouping")
+    pa.add_argument("--special", nargs="*")
     pa.add_argument("--force", action="store_true"); pa.set_defaults(fn=cmd_param_add)
-    pv = p.add_parser("values"); pv.add_argument("model")
-    pv.add_argument("--name", required=True)
-    pv.add_argument("--all-values", nargs="+", dest="all_values")
-    pv.add_argument("--values", nargs="*"); pv.add_argument("--grouping")
-    pv.add_argument("--special", nargs="*"); pv.set_defaults(fn=cmd_param_values)
     pr = p.add_parser("rm"); pr.add_argument("model"); pr.add_argument("name")
     pr.set_defaults(fn=cmd_param_rm)
 
-    ps = sub.add_parser("params"); ps.add_argument("model"); ps.set_defaults(fn=cmd_params)
     ex = sub.add_parser("exclude"); ex.add_argument("model"); ex.add_argument("name")
     ex.add_argument("reason"); ex.set_defaults(fn=cmd_exclude)
 
     st = sub.add_parser("state").add_subparsers(dest="x", required=True)
     sa = st.add_parser("add"); sa.add_argument("model")
-    sa.add_argument("--name", required=True); sa.add_argument("--when", nargs="*")
+    sa.add_argument("--name", required=True)
     sa.add_argument("--desc"); sa.add_argument("--evidence"); sa.set_defaults(fn=cmd_state_add)
     sr = st.add_parser("rm"); sr.add_argument("model"); sr.add_argument("name")
     sr.set_defaults(fn=cmd_state_rm)
-    ss = sub.add_parser("states"); ss.add_argument("model"); ss.set_defaults(fn=cmd_states)
+
+    asg = sub.add_parser("assign"); asg.add_argument("model")
+    asg.add_argument("--state", required=True)
+    asg.add_argument("--rows", nargs="+", required=True)
+    asg.set_defaults(fn=cmd_assign)
 
     r = sub.add_parser("rule").add_subparsers(dest="x", required=True)
     ra = r.add_parser("add"); ra.add_argument("model"); ra.add_argument("--id", required=True)
@@ -398,8 +359,7 @@ def main():
     rr = r.add_parser("rm"); rr.add_argument("model"); rr.add_argument("id")
     rr.set_defaults(fn=cmd_rule_rm)
 
-    sh = sub.add_parser("show"); sh.add_argument("model"); sh.set_defaults(fn=cmd_show)
-    rw = sub.add_parser("rows"); rw.add_argument("result")
+    rw = sub.add_parser("rows"); rw.add_argument("model")
     rw.add_argument("--no-state", action="store_true", dest="no_state")
     rw.add_argument("--limit", type=int, default=50); rw.set_defaults(fn=cmd_rows)
     b = sub.add_parser("build"); b.add_argument("model"); b.set_defaults(fn=cmd_build)

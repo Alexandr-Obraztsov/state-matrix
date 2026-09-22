@@ -4,13 +4,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import engine
 
 
-def model(params, constraints=None, states=None):
+def model(params, constraints=None, states=None, assignments=None):
     return {"system": "T", "source": "s.md", "params": params,
-            "constraints": constraints or [], "states": states or []}
+            "constraints": constraints or [], "states": states or [],
+            "assignments": assignments or {}}
 
 
 def enum(*vals, **kw):
-    p = {"type": "enum", "desc": "d", "from": "s.md:§1",
+    p = {"desc": "d", "from": "s.md:§1",
          "all_values": list(vals), "values": list(vals)}
     p.update(kw)
     return p
@@ -50,35 +51,35 @@ class Matrix(unittest.TestCase):
 
 
 class States(unittest.TestCase):
-    def st(self, name, when):
-        return {"name": name, "when": when, "desc": "видно", "evidence": "s.md:§1"}
+    """Состояния — справочник; привязка к строкам хранится по ключу строки."""
 
-    def test_first_match_wins(self):
-        r = engine.build(model(
-            {"a": enum("1", "2")},
-            states=[self.st("Частный", {"a": "1"}), self.st("Общий", {})]))
-        by = {row["values"]["a"]: row["state"] for row in r["rows"]}
-        self.assertEqual(by["1"], "Частный")
-        self.assertEqual(by["2"], "Общий")
+    def st(self, name):
+        return {"name": name, "desc": "видно", "evidence": "s.md:§1"}
 
-    def test_rows_without_state_are_counted(self):
-        r = engine.build(model({"a": enum("1", "2")},
-                               states=[self.st("Только один", {"a": "1"})]))
-        self.assertEqual(r["counts"]["no_state"], 1)
+    def test_rows_start_without_state(self):
+        r = engine.build(model({"a": enum("1", "2")}, states=[self.st("S")]))
+        self.assertEqual(r["counts"]["no_state"], 2)
         self.assertTrue(any(f["class"] == "UNDEFINED" for f in r["findings"]))
 
-    def test_state_rows_counted(self):
-        r = engine.build(model({"a": enum("1", "2", "3")},
-                               states=[self.st("Все", {})]))
-        self.assertEqual(r["states"][0]["rows"], 3)
+    def test_assignment_by_row_key(self):
+        r = engine.build(model({"a": enum("1", "2")}, states=[self.st("S")],
+                               assignments={"a=1": "S"}))
+        by = {row["values"]["a"]: row["state"] for row in r["rows"]}
+        self.assertEqual(by["1"], "S")
+        self.assertIsNone(by["2"])
+        self.assertEqual(r["states"][0]["rows"], 1)
 
-    def test_mixed_state_detected(self):
-        """Схлопнутая строка не должна покрывать разные состояния."""
+    def test_assignment_to_unknown_state_ignored(self):
+        r = engine.build(model({"a": enum("1")}, states=[self.st("S")],
+                               assignments={"a=1": "Нет такого"}))
+        self.assertIsNone(r["rows"][0]["state"])
+
+    def test_key_survives_collapse(self):
         r = engine.build(model(
             {"a": enum("1"), "b": enum("x", "y")},
             [{"id": "c", "when": {"a": "1"}, "irrelevant": ["b"], "evidence": "s.md:§1"}],
-            [self.st("Первое", {"b": "x"}), self.st("Второе", {"b": "y"})]))
-        self.assertTrue(any(f["class"] == "MIXED_STATE" for f in r["findings"]))
+            states=[self.st("S")], assignments={"a=1|b=*": "S"}))
+        self.assertEqual(r["rows"][0]["state"], "S")
 
 
 class Findings(unittest.TestCase):
@@ -96,7 +97,7 @@ class Findings(unittest.TestCase):
 
     def test_no_ceiling_finding_when_small(self):
         r = engine.build(model({"a": enum("1", "2")},
-                               states=[{"name": "S", "when": {}, "desc": "d",
+                               states=[{"name": "S", "desc": "d",
                                         "evidence": "s.md:§1"}]))
         self.assertFalse([x for x in r["findings"] if x["class"] == "CEILING"])
 

@@ -32,10 +32,10 @@ class T(unittest.TestCase):
     def test_tools_list_has_schemas(self):
         out, _ = talk([INIT, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}])
         tools = out[1]["result"]["tools"]
-        self.assertGreaterEqual(len(tools), 12)
+        self.assertGreaterEqual(len(tools), 10)
         names = {t["name"] for t in tools}
-        for n in ("sm_init", "sm_param_add", "sm_param_values", "sm_params",
-                  "sm_state_add", "sm_states", "sm_rule_add", "sm_build", "sm_rows"):
+        for n in ("sm_init", "sm_param_add", "sm_state_add", "sm_rule_add",
+                  "sm_build", "sm_assign", "sm_rows"):
             self.assertIn(n, names)
         for t in tools:
             self.assertIn("inputSchema", t)
@@ -49,7 +49,6 @@ class T(unittest.TestCase):
                            call("sm_init", {"model": m, "system": "X",
                                             "source": "spec.md"}, 2),
                            call("sm_param_add", {"model": m, "name": "n",
-                                                 "type": "number",
                                                  "desc": "d"}, 3)])
             res = out[2]["result"]
             self.assertTrue(res["isError"])
@@ -64,17 +63,15 @@ class T(unittest.TestCase):
             out, err = talk([
                 INIT,
                 call("sm_init", {"model": m, "system": "X", "source": "spec.md"}, 2),
-                call("sm_param_add", {"model": m, "name": "cart", "type": "enum",
+                call("sm_param_add", {"model": m, "name": "cart",
                                       "desc": "состояние корзины",
-                                      "from": "spec.md:§1", "root": d}, 3),
-                call("sm_param_values", {"model": m, "name": "cart",
-                                         "all_values": ["pending", "ok"]}, 4),
-                call("sm_state_add", {"model": m, "name": "Загрузка",
-                                      "when": ["cart=pending"], "desc": "скелетон",
-                                      "evidence": "spec.md:§1", "root": d}, 5),
-                call("sm_state_add", {"model": m, "name": "Готово",
-                                      "when": ["cart=ok"], "desc": "форма",
-                                      "evidence": "spec.md:§1", "root": d}, 6),
+                                      "from": "spec.md:§1",
+                                      "all_values": ["pending", "ok"], "root": d}, 3),
+                call("sm_state_add", {"model": m, "name": "Загрузка", "desc": "скелетон",
+                                      "evidence": "spec.md:§1", "root": d}, 4),
+                call("sm_build", {"model": m, "root": d}, 5),
+                call("sm_assign", {"model": m, "state": "Загрузка",
+                                   "rows": ["r000"]}, 6),
                 call("sm_build", {"model": m, "root": d}, 7),
             ])
             for r in out[1:]:
@@ -109,17 +106,15 @@ class StreamPurity(unittest.TestCase):
             out, err = talk([
                 INIT,
                 call("sm_init", {"model": m, "system": "D", "source": "spec.md"}, 2),
-                call("sm_param_add", {"model": m, "name": "a", "type": "enum",
-                                      "desc": "d", "from": "spec.md:§1", "root": d}, 3),
-                call("sm_param_values", {"model": m, "name": "a",
-                                         "all_values": ["x", "y"]}, 4),
-                call("sm_state_add", {"model": m, "name": "Любое", "when": [],
-                                      "desc": "всё", "evidence": "spec.md:§1",
-                                      "root": d}, 5),
-                call("sm_build", {"model": m, "root": d}, 6),
+                call("sm_param_add", {"model": m, "name": "a", "desc": "d",
+                                      "from": "spec.md:§1",
+                                      "all_values": ["x", "y"], "root": d}, 3),
+                call("sm_state_add", {"model": m, "name": "Любое", "desc": "всё",
+                                      "evidence": "spec.md:§1", "root": d}, 4),
+                call("sm_build", {"model": m, "root": d}, 5),
             ])
             self.assertEqual(err.strip(), "", "сервер не должен писать в stderr")
-            self.assertEqual(len(out), 6, "лишние или потерянные ответы")
+            self.assertEqual(len(out), 5, "лишние или потерянные ответы")
             last = out[-1]["result"]
             self.assertFalse(last.get("isError"), last["content"][0]["text"])
             self.assertIn("МАТРИЦА", last["content"][0]["text"])

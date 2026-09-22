@@ -7,20 +7,20 @@ SPEC = "# Спека\n\n## §1 Раздел\nтекст\n"
 
 
 def param(**kw):
-    p = {"type": "enum", "desc": "d", "from": "spec.md:§1",
+    p = {"desc": "d", "from": "spec.md:§1",
          "all_values": ["a"], "values": ["a"]}
     p.update(kw)
     return p
 
 
 def state(**kw):
-    s = {"name": "S", "when": {"x": "a"}, "desc": "видно", "evidence": "spec.md:§1"}
+    s = {"name": "S", "desc": "видно", "evidence": "spec.md:§1"}
     s.update(kw)
     return s
 
 
 class T(unittest.TestCase):
-    def check(self, params=None, constraints=None, states=None):
+    def check(self, params=None, constraints=None, states=None, assignments=None):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "spec.md"), "w", encoding="utf-8") as f:
                 f.write(SPEC)
@@ -28,7 +28,8 @@ class T(unittest.TestCase):
             store.save(p, {"system": "T", "source": "spec.md",
                            "params": params if params is not None else {"x": param()},
                            "constraints": constraints or [],
-                           "states": states if states is not None else [state()]})
+                           "states": states if states is not None else [state()],
+                           "assignments": assignments or {}})
             return validate.check(p, d)
 
     def test_clean_model_passes(self):
@@ -75,17 +76,13 @@ class T(unittest.TestCase):
         e, w = self.check(states=[s])
         self.assertTrue(any("desc" in z for z in e), e)
 
-    def test_state_unknown_value(self):
-        e, w = self.check(states=[state(when={"x": "нет_такого"})])
-        self.assertTrue(any("отсутствует" in z for z in e), e)
+    def test_assignment_to_unknown_state(self):
+        e, w = self.check(assignments={"x=a": "Нет такого"})
+        self.assertTrue(any("Нет такого" in z for z in e), e)
 
     def test_duplicate_state_names(self):
         e, w = self.check(states=[state(), state()])
         self.assertTrue(any("повторяется" in z for z in e), e)
-
-    def test_catchall_must_be_last(self):
-        e, w = self.check(states=[state(name="Все", when={}), state(name="Частное")])
-        self.assertTrue(any("не последнее" in z for z in e), e)
 
     def test_no_states_is_warning(self):
         e, w = self.check(states=[])

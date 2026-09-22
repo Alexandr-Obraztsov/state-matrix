@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Модель → матрица. Детерминирован: одна модель даёт побайтово одинаковый вывод."""
+"""Модель → матрица. Детерминирован: одна модель даёт побайтово одинаковый вывод.
+
+Состояния к строкам не привязываются условиями — они назначаются вручную
+после свёртки и хранятся в модели по ключу строки.
+"""
 import sys, os, json, itertools, hashlib, datetime, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import store
@@ -11,33 +15,26 @@ def as_list(v):
 
 
 def matches(row, cond):
-    """Строка подходит под условие, если совпали все указанные параметры."""
     for k, v in (cond or {}).items():
         if k not in row or row[k] not in as_list(v):
             return False
     return True
 
 
+def row_key(values, names):
+    """Ключ строки — переживает пересборку, по нему хранится назначенное состояние."""
+    return "|".join(f"{n}={values[n]}" for n in names)
+
+
 def rule_text(c):
-    """Правило по-русски: что делает с матрицей."""
     def vals(v):
         return " или ".join(f"«{x}»" for x in as_list(v))
     if "forbid" in c:
         cond = ", ".join(f"{k} = {vals(v)}" for k, v in c["forbid"].items())
-        return {"kind": "запрет", "what": f"комбинация {cond} невозможна",
-                "effect": "строки вычёркиваются"}
+        return {"kind": "запрет", "what": f"комбинация {cond} невозможна"}
     cond = ", ".join(f"{k} = {vals(v)}" for k, v in (c.get("when") or {}).items()) or "всегда"
     ps = ", ".join(c["irrelevant"])
-    return {"kind": "схлопывание", "what": f"при {cond} значения {ps} на исход не влияют",
-            "effect": f"колонки {ps} сливаются в «∗»"}
-
-
-def state_of(row, states):
-    """Первое подходящее состояние. Порядок в модели значим."""
-    for st in states:
-        if matches(row, st.get("when") or {}):
-            return st
-    return None
+    return {"kind": "схлопывание", "what": f"при {cond} значения {ps} на исход не влияют"}
 
 
 def build(model):
@@ -53,14 +50,12 @@ def build(model):
     forbids = [c for c in cons if "forbid" in c]
     irrel = [c for c in cons if "irrelevant" in c]
 
-    # 1. запреты вычёркивают строки
-    valid, funnel_rules = rows, []
+    valid, removed = rows, {}
     for c in forbids:
         before = len(valid)
         valid = [r for r in valid if not matches(r, c["forbid"])]
-        funnel_rules.append({"id": c.get("id"), "removed": before - len(valid)})
+        removed[c.get("id")] = before - len(valid)
 
-    # 2. схлопывание незначащих колонок
     groups, order, why = {}, [], {}
     for r in valid:
         v, used = dict(r), []
@@ -70,43 +65,34 @@ def build(model):
                     if v[p] != "*":
                         v[p] = "*"
                         used.append(c)
-        k = "|".join(f"{x}={v[x]}" for x in names)
+        k = row_key(v, names)
         if k not in groups:
-            groups[k] = {"values": v, "covered": []}
+            groups[k] = {"values": v, "covered": 0}
             order.append(k)
             why[k] = {id(c): c for c in used}
-        groups[k]["covered"].append(r)
+        groups[k]["covered"] += 1
 
-    states = model.get("states") or []
-    matrix, mixed = [], []
+    assigned = model.get("assignments") or {}
+    by_name = {s["name"]: s for s in (model.get("states") or [])}
+    matrix = []
     for i, k in enumerate(order):
         g = groups[k]
-        starred = [p for p, x in g["values"].items() if x == "*"]
-        hits = {(state_of(r, states) or {}).get("name") for r in g["covered"]}
-        st = state_of(g["values"], states)
-        if st is None and len(hits) == 1 and next(iter(hits)):
-            st = next(x for x in states if x["name"] == next(iter(hits)))
-        row = {
+        name = assigned.get(k)
+        matrix.append({
             "id": f"r{i:03d}",
+            "key": k,
             "values": g["values"],
-            "covers": len(g["covered"]),
-            "collapsed": {p: sorted({str(c[p]) for c in g["covered"]}) for p in starred},
-            "rules": [{"what": rule_text(c)["what"], "evidence": c.get("evidence", "—")}
-                      for c in why[k].values()],
-            "state": (st or {}).get("name"),
-            "desc": (st or {}).get("desc"),
-        }
-        if len(hits) > 1:
-            mixed.append(row["id"])
-        matrix.append(row)
+            "covers": g["covered"],
+            "state": name if name in by_name else None,
+            "desc": (by_name.get(name) or {}).get("desc"),
+        })
 
     specials = [{"param": n, "value": s}
                 for n in names for s in (params[n].get("special") or [])]
-
-    state_stats = [{"name": st["name"], "desc": st.get("desc"),
-                    "when": st.get("when") or {}, "evidence": st.get("evidence", "—"),
-                    "rows": sum(1 for m in matrix if m["state"] == st["name"])}
-                   for st in states]
+    state_stats = [{"name": s["name"], "desc": s.get("desc"),
+                    "evidence": s.get("evidence", "—"),
+                    "rows": sum(1 for m in matrix if m["state"] == s["name"])}
+                   for s in (model.get("states") or [])]
     no_state = [m["id"] for m in matrix if not m["state"]]
 
     findings = []
@@ -114,23 +100,16 @@ def build(model):
         contrib = sorted(((len(p["values"]), n) for n, p in params.items()), reverse=True)
         lines = [f"{len(matrix)} строк при потолке {CEILING}", "", "вклад параметров:"]
         lines += [f"  {n:14} ×{f}" for f, n in contrib]
-        lines.append("")
-        lines.append("ищи правила свёртки в спеке; если их нет — это несколько систем "
-                     "в одном документе, предложи разбиение")
+        lines += ["", "ищи правила свёртки в спеке; если их нет — это несколько систем "
+                      "в одном документе, предложи разбиение"]
         findings.append({"class": "CEILING", "severity": "block",
                          "message": "\n".join(lines)})
-    if mixed:
-        findings.append({"class": "MIXED_STATE", "severity": "block",
-                         "message": f"{len(mixed)} схлопнутых строк покрывают разные "
-                                    "состояния — правило схлопывания слишком широкое",
-                         "rows": mixed})
     for i in range(len(irrel)):
         for j in range(i + 1, len(irrel)):
             a, b = irrel[i], irrel[j]
             if not (a.get("when") and b.get("when")):
                 continue
-            n = sum(1 for r in valid
-                    if matches(r, a["when"]) and matches(r, b["when"]))
+            n = sum(1 for r in valid if matches(r, a["when"]) and matches(r, b["when"]))
             if n:
                 findings.append({
                     "class": "RULE_OVERLAP", "severity": "block",
@@ -138,7 +117,7 @@ def build(model):
                                f"одновременно к {n} комбинациям — порядок не определён"})
     if no_state:
         findings.append({"class": "UNDEFINED", "severity": "warn",
-                         "message": f"{len(no_state)} строк не отнесены ни к одному состоянию",
+                         "message": f"{len(no_state)} строк без состояния",
                          "rows": no_state})
 
     return {
@@ -153,11 +132,8 @@ def build(model):
         "excluded": model.get("excluded") or {},
         "rules": [dict(rule_text(c), id=c.get("id"), desc=c.get("desc"),
                        evidence=c.get("evidence", "—"),
-                       removed=next((f["removed"] for f in funnel_rules
-                                     if f["id"] == c.get("id")), None))
-                  for c in cons],
+                       removed=removed.get(c.get("id"))) for c in cons],
         "states": state_stats,
-        "no_state": len(no_state),
         "rows": matrix,
         "specials": specials,
         "findings": findings,
@@ -176,7 +152,7 @@ def main():
         store.save(a.out, res)
         c = res["counts"]
         print(f"{res['system']}: {c['total']} → {c['valid']} → {c['collapsed']} строк "
-              f"(+{c['specials']} спец), находок {len(res['findings'])}")
+              f"(+{c['specials']} спец), без состояния {c['no_state']}")
     else:
         print(json.dumps(res, ensure_ascii=False, indent=2))
 
