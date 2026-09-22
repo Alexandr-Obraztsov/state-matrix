@@ -1,7 +1,207 @@
 [
   {
+    "id": "free_text",
+    "matches": {
+      "names": [
+        "text",
+        "comment",
+        "description",
+        "title",
+        "note",
+        "message",
+        "body"
+      ],
+      "types": [
+        "string"
+      ]
+    },
+    "questions": [
+      {
+        "id": "required",
+        "ask": "поле обязательно и допустима ли пустая строка?"
+      },
+      {
+        "id": "maxlen",
+        "ask": "какова максимальная длина?"
+      },
+      {
+        "id": "trim",
+        "ask": "обрезаются ли пробелы по краям на входе?"
+      },
+      {
+        "id": "render",
+        "ask": "содержимое интерпретируется как markdown или html?"
+      },
+      {
+        "id": "blank",
+        "ask": "строка из одних пробелов считается заполненной?"
+      }
+    ],
+    "values": [
+      "empty",
+      "blank",
+      "typical",
+      "max_len",
+      "over_max_len"
+    ],
+    "special": [
+      "emoji",
+      "rtl",
+      "newlines",
+      "long_word_no_spaces",
+      "markdown_injection",
+      "zero_width"
+    ],
+    "seen": []
+  },
+  {
+    "id": "identifier",
+    "matches": {
+      "names": [
+        "id",
+        "uuid",
+        "slug",
+        "key",
+        "code",
+        "sku"
+      ],
+      "types": [
+        "string",
+        "number"
+      ]
+    },
+    "questions": [
+      {
+        "id": "shape",
+        "ask": "какой формат — uuid, число, произвольная строка?"
+      },
+      {
+        "id": "case",
+        "ask": "регистр значим?"
+      },
+      {
+        "id": "missing",
+        "ask": "что происходит, когда сущности с таким id нет?"
+      },
+      {
+        "id": "foreign",
+        "ask": "может ли id указывать на чужой ресурс, и проверяются ли права?"
+      }
+    ],
+    "values": [
+      "valid",
+      "not_found",
+      "malformed"
+    ],
+    "special": [
+      "empty",
+      "very_long",
+      "sql_like",
+      "path_traversal"
+    ],
+    "seen": []
+  },
+  {
+    "id": "formatted_string",
+    "matches": {
+      "names": [
+        "email",
+        "url",
+        "phone",
+        "domain",
+        "link"
+      ],
+      "types": [
+        "string"
+      ]
+    },
+    "questions": [
+      {
+        "id": "validator",
+        "ask": "где проверяется формат — на клиенте, на сервере или нигде?"
+      },
+      {
+        "id": "normalize",
+        "ask": "значение нормализуется (нижний регистр, схема протокола)?"
+      },
+      {
+        "id": "reject",
+        "ask": "что показывается при неверном формате?"
+      }
+    ],
+    "values": [
+      "valid",
+      "invalid_format",
+      "empty"
+    ],
+    "special": [
+      "unicode_domain",
+      "very_long",
+      "leading_space",
+      "case_variant"
+    ],
+    "seen": []
+  },
+  {
+    "id": "number",
+    "matches": {
+      "names": [
+        "value",
+        "amount",
+        "size",
+        "weight",
+        "score",
+        "index"
+      ],
+      "types": [
+        "number",
+        "integer"
+      ]
+    },
+    "questions": [
+      {
+        "id": "bounds",
+        "ask": "есть ли нижняя и верхняя границы?"
+      },
+      {
+        "id": "integer",
+        "ask": "число целое или допускает дробную часть?"
+      },
+      {
+        "id": "zero",
+        "ask": "ноль осмыслен?"
+      },
+      {
+        "id": "negative",
+        "ask": "отрицательное возможно?"
+      },
+      {
+        "id": "unit",
+        "ask": "в каких единицах измеряется?"
+      },
+      {
+        "id": "over",
+        "ask": "что происходит при выходе за границу — обрезка, ошибка или значение по умолчанию?"
+      }
+    ],
+    "values": [
+      "min",
+      "default",
+      "max",
+      "over_max"
+    ],
+    "special": [
+      "zero",
+      "negative",
+      "fractional",
+      "nan",
+      "infinity",
+      "over_int32"
+    ],
+    "seen": []
+  },
+  {
     "id": "money_amount",
-    "version": 1,
     "matches": {
       "names": [
         "amount",
@@ -10,7 +210,8 @@
         "total",
         "cost",
         "fee",
-        "balance"
+        "balance",
+        "discount"
       ],
       "types": [
         "number",
@@ -33,6 +234,10 @@
       {
         "id": "max",
         "ask": "есть ли верхний лимит суммы?"
+      },
+      {
+        "id": "rounding",
+        "ask": "как округляется при расчётах?"
       }
     ],
     "values": [
@@ -44,19 +249,21 @@
     "special": [
       "negative",
       "fractional_unit",
-      "over_int32"
+      "over_int32",
+      "string_with_comma"
     ],
     "seen": []
   },
   {
     "id": "pagination_limit",
-    "version": 1,
     "matches": {
       "names": [
         "limit",
         "perPage",
         "pageSize",
-        "count"
+        "count",
+        "offset",
+        "page"
       ],
       "types": [
         "number"
@@ -65,11 +272,15 @@
     "questions": [
       {
         "id": "bounds",
-        "ask": "min/max и значение по умолчанию?"
+        "ask": "каковы min, max и значение по умолчанию?"
       },
       {
         "id": "over",
-        "ask": "что при превышении максимума — обрезать, ошибка или дефолт?"
+        "ask": "что при превышении максимума — обрезка, ошибка или дефолт?"
+      },
+      {
+        "id": "beyond",
+        "ask": "что возвращается за последней страницей — пусто или ошибка?"
       }
     ],
     "values": [
@@ -81,65 +292,257 @@
     "special": [
       "zero",
       "negative",
-      "fractional"
+      "fractional",
+      "beyond_last_page"
     ],
     "seen": []
   },
   {
-    "id": "free_text",
-    "version": 1,
+    "id": "percentage",
     "matches": {
       "names": [
-        "text",
-        "comment",
-        "description",
-        "title",
-        "note"
+        "percent",
+        "ratio",
+        "progress",
+        "rate",
+        "share"
       ],
       "types": [
+        "number"
+      ]
+    },
+    "questions": [
+      {
+        "id": "scale",
+        "ask": "шкала 0–1 или 0–100?"
+      },
+      {
+        "id": "over",
+        "ask": "возможно ли значение больше максимума?"
+      },
+      {
+        "id": "round",
+        "ask": "как отображается дробная часть?"
+      }
+    ],
+    "values": [
+      "zero",
+      "partial",
+      "full"
+    ],
+    "special": [
+      "over_full",
+      "negative",
+      "fractional_display"
+    ],
+    "seen": []
+  },
+  {
+    "id": "duration",
+    "matches": {
+      "names": [
+        "timeout",
+        "delay",
+        "ttl",
+        "duration",
+        "interval",
+        "expiresIn"
+      ],
+      "types": [
+        "number",
         "string"
       ]
     },
     "questions": [
       {
-        "id": "required",
-        "ask": "поле обязательно? пустая строка допустима?"
+        "id": "unit",
+        "ask": "в каких единицах — миллисекунды, секунды, минуты?"
       },
       {
-        "id": "maxlen",
-        "ask": "максимальная длина?"
+        "id": "zero",
+        "ask": "что означает ноль — мгновенно или без ограничения?"
       },
       {
-        "id": "trim",
-        "ask": "пробелы по краям обрезаются на входе?"
+        "id": "max",
+        "ask": "есть ли верхний предел?"
       },
       {
-        "id": "render",
-        "ask": "содержимое интерпретируется (markdown, html)?"
+        "id": "expired",
+        "ask": "что происходит, когда время вышло?"
+      }
+    ],
+    "values": [
+      "zero",
+      "short",
+      "typical",
+      "max"
+    ],
+    "special": [
+      "negative",
+      "over_max",
+      "fractional"
+    ],
+    "seen": []
+  },
+  {
+    "id": "date_time",
+    "matches": {
+      "names": [
+        "date",
+        "time",
+        "createdAt",
+        "updatedAt",
+        "deadline",
+        "startsAt"
+      ],
+      "types": [
+        "string",
+        "number",
+        "date"
+      ]
+    },
+    "questions": [
+      {
+        "id": "tz",
+        "ask": "в какой таймзоне хранится и в какой показывается?"
+      },
+      {
+        "id": "future",
+        "ask": "дата в будущем допустима?"
+      },
+      {
+        "id": "past",
+        "ask": "дата в прошлом допустима?"
+      },
+      {
+        "id": "format",
+        "ask": "формат на входе — ISO, unix timestamp, локальный?"
+      },
+      {
+        "id": "invalid",
+        "ask": "что происходит с невалидной датой?"
+      }
+    ],
+    "values": [
+      "past",
+      "now",
+      "future"
+    ],
+    "special": [
+      "invalid",
+      "day_boundary",
+      "dst_shift",
+      "epoch_zero",
+      "far_future",
+      "leap_day"
+    ],
+    "seen": []
+  },
+  {
+    "id": "collection",
+    "matches": {
+      "names": [
+        "items",
+        "list",
+        "rows",
+        "results",
+        "children",
+        "tags",
+        "files"
+      ],
+      "types": [
+        "array",
+        "list"
+      ]
+    },
+    "questions": [
+      {
+        "id": "empty",
+        "ask": "пустой список допустим и как он выглядит?"
+      },
+      {
+        "id": "max",
+        "ask": "есть ли максимальная длина?"
+      },
+      {
+        "id": "order",
+        "ask": "порядок элементов значим?"
+      },
+      {
+        "id": "dupes",
+        "ask": "дубликаты допустимы?"
+      },
+      {
+        "id": "single",
+        "ask": "один элемент выглядит иначе, чем несколько?"
       }
     ],
     "values": [
       "empty",
-      "blank",
-      "typical",
-      "max_len",
-      "over_max_len"
+      "one",
+      "few",
+      "max"
     ],
     "special": [
-      "emoji",
-      "rtl",
-      "newlines",
-      "long_word_no_spaces",
-      "markdown_injection"
+      "over_max",
+      "with_duplicates",
+      "null_element",
+      "nested_deep"
+    ],
+    "seen": []
+  },
+  {
+    "id": "boolean_flag",
+    "matches": {
+      "names": [
+        "enabled",
+        "visible",
+        "disabled",
+        "checked",
+        "active",
+        "open",
+        "loading"
+      ],
+      "types": [
+        "boolean"
+      ]
+    },
+    "questions": [
+      {
+        "id": "default",
+        "ask": "каково значение по умолчанию?"
+      },
+      {
+        "id": "optional",
+        "ask": "флаг может быть не передан, и отличается ли это от false?"
+      },
+      {
+        "id": "effect",
+        "ask": "что именно меняется в поведении, а не только в виде?"
+      }
+    ],
+    "values": [
+      "true",
+      "false"
+    ],
+    "special": [
+      "undefined"
     ],
     "seen": []
   },
   {
     "id": "http_endpoint",
-    "version": 1,
     "matches": {
+      "names": [
+        "request",
+        "query",
+        "fetch",
+        "api",
+        "data"
+      ],
       "types": [
-        "endpoint"
+        "endpoint",
+        "request"
       ]
     },
     "questions": [
@@ -153,7 +556,7 @@
       },
       {
         "id": "partial",
-        "ask": "приходят ли частичные данные (nullable-поля)?"
+        "ask": "приходят ли частичные данные — nullable-поля в ответе?"
       },
       {
         "id": "timeout",
@@ -166,6 +569,14 @@
       {
         "id": "late",
         "ask": "может ли ответ прийти после ухода со страницы?"
+      },
+      {
+        "id": "order",
+        "ask": "важен ли порядок относительно других запросов?"
+      },
+      {
+        "id": "retry",
+        "ask": "запрос идемпотентен и повторяется ли автоматически?"
       }
     ],
     "values": [
@@ -180,11 +591,299 @@
       "status_403",
       "status_404",
       "status_409",
+      "status_422",
       "status_500",
       "timeout",
       "network_error",
       "malformed",
       "slow_after_unmount"
+    ],
+    "seen": []
+  },
+  {
+    "id": "error_state",
+    "matches": {
+      "names": [
+        "error",
+        "err",
+        "failure",
+        "errorMessage",
+        "problem"
+      ],
+      "types": [
+        "enum",
+        "string",
+        "object"
+      ]
+    },
+    "questions": [
+      {
+        "id": "where",
+        "ask": "где показывается ошибка — у поля, баннером или экраном целиком?"
+      },
+      {
+        "id": "retry",
+        "ask": "есть ли повтор действия и сколько попыток?"
+      },
+      {
+        "id": "text",
+        "ask": "текст приходит с бэкенда или свой на клиенте?"
+      },
+      {
+        "id": "data",
+        "ask": "что происходит с уже введёнными данными при ошибке?"
+      },
+      {
+        "id": "log",
+        "ask": "ошибка логируется или уходит в мониторинг?"
+      },
+      {
+        "id": "clear",
+        "ask": "когда ошибка исчезает?"
+      }
+    ],
+    "values": [
+      "none",
+      "field",
+      "banner",
+      "fatal"
+    ],
+    "special": [
+      "unknown_code",
+      "empty_message",
+      "html_in_message",
+      "very_long_message"
+    ],
+    "seen": []
+  },
+  {
+    "id": "auth_role",
+    "matches": {
+      "names": [
+        "role",
+        "permission",
+        "scope",
+        "auth",
+        "user",
+        "actor",
+        "access"
+      ],
+      "types": [
+        "enum",
+        "string"
+      ]
+    },
+    "questions": [
+      {
+        "id": "roles",
+        "ask": "полный список ролей?"
+      },
+      {
+        "id": "anon",
+        "ask": "возможен ли неавторизованный доступ?"
+      },
+      {
+        "id": "owner",
+        "ask": "отличается ли владелец ресурса от обычного пользователя?"
+      },
+      {
+        "id": "denied",
+        "ask": "что возвращается при отказе — 403 или 404?"
+      },
+      {
+        "id": "mid",
+        "ask": "что происходит, если права меняются посреди сессии?"
+      }
+    ],
+    "values": [
+      "anonymous",
+      "user",
+      "owner",
+      "admin"
+    ],
+    "special": [
+      "expired_token",
+      "revoked_mid_session",
+      "unknown_role"
+    ],
+    "seen": []
+  },
+  {
+    "id": "file_upload",
+    "matches": {
+      "names": [
+        "file",
+        "upload",
+        "attachment",
+        "image",
+        "avatar",
+        "document"
+      ],
+      "types": [
+        "file",
+        "object"
+      ]
+    },
+    "questions": [
+      {
+        "id": "types",
+        "ask": "какие типы файлов принимаются?"
+      },
+      {
+        "id": "size",
+        "ask": "каков максимальный размер?"
+      },
+      {
+        "id": "multiple",
+        "ask": "можно ли загружать несколько файлов сразу?"
+      },
+      {
+        "id": "reject",
+        "ask": "что показывается при отклонённом файле?"
+      },
+      {
+        "id": "progress",
+        "ask": "показывается ли прогресс и можно ли отменить?"
+      }
+    ],
+    "values": [
+      "none",
+      "valid",
+      "too_large",
+      "wrong_type"
+    ],
+    "special": [
+      "zero_bytes",
+      "name_with_unicode",
+      "name_very_long",
+      "corrupted",
+      "double_extension"
+    ],
+    "seen": []
+  },
+  {
+    "id": "viewport",
+    "matches": {
+      "names": [
+        "viewport",
+        "breakpoint",
+        "screen",
+        "isMobile",
+        "device"
+      ],
+      "types": [
+        "enum",
+        "boolean"
+      ]
+    },
+    "env_candidate": true,
+    "questions": [
+      {
+        "id": "points",
+        "ask": "какие брейкпоинты различаются?"
+      },
+      {
+        "id": "runtime",
+        "ask": "меняется ли в рантайме — поворот экрана, ресайз окна?"
+      },
+      {
+        "id": "behavior",
+        "ask": "меняется только вёрстка или ещё и поведение?"
+      }
+    ],
+    "values": [
+      "mobile",
+      "tablet",
+      "desktop"
+    ],
+    "special": [
+      "very_narrow",
+      "landscape_phone"
+    ],
+    "seen": []
+  },
+  {
+    "id": "locale",
+    "matches": {
+      "names": [
+        "locale",
+        "lang",
+        "language",
+        "i18n",
+        "region"
+      ],
+      "types": [
+        "enum",
+        "string"
+      ]
+    },
+    "env_candidate": true,
+    "questions": [
+      {
+        "id": "list",
+        "ask": "какие локали поддерживаются?"
+      },
+      {
+        "id": "fallback",
+        "ask": "что происходит при отсутствующем переводе?"
+      },
+      {
+        "id": "rtl",
+        "ask": "есть ли языки с письмом справа налево?"
+      },
+      {
+        "id": "formats",
+        "ask": "меняются ли форматы чисел и дат вместе с языком?"
+      }
+    ],
+    "values": [
+      "default",
+      "other"
+    ],
+    "special": [
+      "missing_translation",
+      "rtl",
+      "very_long_translation"
+    ],
+    "seen": []
+  },
+  {
+    "id": "feature_flag",
+    "matches": {
+      "names": [
+        "flag",
+        "feature",
+        "experiment",
+        "toggle",
+        "ab"
+      ],
+      "types": [
+        "boolean",
+        "enum"
+      ]
+    },
+    "env_candidate": true,
+    "questions": [
+      {
+        "id": "default",
+        "ask": "каково значение по умолчанию, если флаг недоступен?"
+      },
+      {
+        "id": "runtime",
+        "ask": "может ли флаг переключиться посреди сессии?"
+      },
+      {
+        "id": "cleanup",
+        "ask": "когда флаг планируется удалить?"
+      }
+    ],
+    "values": [
+      "on",
+      "off"
+    ],
+    "special": [
+      "unavailable",
+      "changed_mid_session"
     ],
     "seen": []
   }
