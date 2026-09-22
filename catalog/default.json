@@ -63,7 +63,8 @@
         "slug",
         "key",
         "code",
-        "sku"
+        "sku",
+        "ref"
       ],
       "types": [
         "string",
@@ -147,11 +148,12 @@
     "matches": {
       "names": [
         "value",
-        "amount",
         "size",
         "weight",
         "score",
-        "index"
+        "index",
+        "quantity",
+        "level"
       ],
       "types": [
         "number",
@@ -448,7 +450,8 @@
         "results",
         "children",
         "tags",
-        "files"
+        "files",
+        "entries"
       ],
       "types": [
         "array",

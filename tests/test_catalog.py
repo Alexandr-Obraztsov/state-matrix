@@ -51,3 +51,16 @@ class T(unittest.TestCase):
             self.assertIsInstance(m.get("types", []), list)
             self.assertTrue(m.get("names") or m.get("types"),
                             f"{e['id']}: семантику невозможно найти")
+
+
+class NoOverlap(unittest.TestCase):
+    def test_names_do_not_collide(self):
+        """Имя в двух семантиках — параметр уйдёт не в ту корзину."""
+        c = store.load(CAT)
+        seen, dupes = {}, []
+        for e in c:
+            for n in e["matches"].get("names", []):
+                if n in seen:
+                    dupes.append(f"«{n}»: {seen[n]} и {e['id']}")
+                seen[n] = e["id"]
+        self.assertEqual(dupes, [])
