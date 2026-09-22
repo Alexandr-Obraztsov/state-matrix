@@ -48,11 +48,20 @@ def save_ledger(model, L):
     json.dump(L, open(ledger_path(model), "w"), ensure_ascii=False, indent=1)
 
 
+def project_catalog(model_path):
+    """Проектная корзина лежит рядом с .states/, на уровень выше models/."""
+    return os.path.normpath(os.path.join(
+        os.path.dirname(model_path) or ".", "..", "catalog.json"))
+
+
 def catalogs(project_dir):
+    """Дефолтная корзина плюс проектная. Проектная ищется рядом с моделью
+    и на уровень выше (обычный случай — .states/catalog.json)."""
     out = store.load(DEFAULT_CATALOG) or []
-    local = os.path.join(project_dir, "catalog.json")
-    if os.path.exists(local):
-        out = (store.load(local) or []) + out
+    for cand in (os.path.join(project_dir, "..", "catalog.json"),
+                 os.path.join(project_dir, "catalog.json")):
+        if os.path.exists(cand):
+            out = (store.load(cand) or []) + out
     return out
 
 
@@ -76,7 +85,12 @@ def cmd_init(a):
                          "params": {}, "excluded": {}, "constraints": [],
                          "transitions": [], "states": []})
     print(f"модель заведена: {a.model}")
-    print(f"дальше: python3 scripts/extract.py {a.source}   — кандидаты в параметры")
+    if a.mode == "code":
+        print(f"дальше: extract.py {a.source} — кандидаты в параметры,"
+              " каждый в params или в exclude")
+    else:
+        print(f"дальше: прочитай {a.source} и выпиши входные параметры;"
+              " по каждому сначала sm.py catalog, потом param add")
 
 
 def cmd_show(a):
@@ -220,7 +234,7 @@ def cmd_catalog_list(a):
 
 
 def cmd_catalog_new(a):
-    p = os.path.join(os.path.dirname(a.model) or ".", "catalog.json")
+    p = project_catalog(a.model)
     cur = store.load(p) or []
     if any(c["id"] == a.id for c in cur):
         die(f"семантика «{a.id}» уже есть в проектном каталоге")
@@ -250,15 +264,22 @@ def cmd_catalog(a):
     cat = catalogs(os.path.dirname(a.model) or ".")
     exact, loose = find(cat, a.name, a.type)
     L = ledger(a.model)
-    hit = (exact or loose or [None])[0]
+    hit = exact[0] if exact else None
 
     print(f"# корзина для «{a.name}» (тип {a.type})")
     if exact:
-        print(f"\nТОЧНОЕ СОВПАДЕНИЕ: {hit['id']}@{hit.get('version',1)}")
+        print(f"\nТОЧНОЕ СОВПАДЕНИЕ ПО ИМЕНИ: {hit['id']}")
     elif loose:
-        print(f"\nПОХОЖЕ: {hit['id']}@{hit.get('version',1)} — подтверди или заведи новую семантику")
+        print(f"\nПО ИМЕНИ НЕ НАШЛОСЬ. Подходят по типу «{a.type}» — ВЫБЕРИ САМ:")
+        for c in loose:
+            names = ", ".join((c.get("matches") or {}).get("names", [])[:4])
+            print(f"  {c['id']:18} {len(c['questions'])} вопр.  значения: "
+                  f"{', '.join(map(str, c.get('values', [])))}")
+            print(f"      обычно это: {names}")
+        print(f"\nпередай выбор в param add: --catalog <id>")
+        print(f"ничего не подходит — заведи свою: sm.py catalog-new")
     else:
-        print("\nСОВПАДЕНИЙ НЕТ — семантика новая, заведи её командой `catalog new`")
+        print("\nСОВПАДЕНИЙ НЕТ — семантика новая, заведи её: sm.py catalog-new")
 
     qs = (hit or {}).get("questions") or []
     if hit:
@@ -274,9 +295,12 @@ def cmd_catalog(a):
 
     L["lookups"][a.name] = {"catalog": (hit or {}).get("id"),
                             "questions": [q["id"] for q in qs],
+                            "choices": {c["id"]: [q["id"] for q in c["questions"]]
+                                        for c in loose} if not exact else {},
                             "at": datetime.datetime.now().isoformat(timespec="seconds")}
     save_ledger(a.model, L)
-    print(f"\nзапрос записан; теперь можно: sm.py param add {a.model} --name {a.name} …")
+    if exact or not loose:
+        print(f"\nзапрос записан; дальше: sm.py param add {a.model} --name {a.name} …")
 
 
 def cmd_param_add(a):
@@ -285,6 +309,18 @@ def cmd_param_add(a):
     if not look:
         die(f"корзина для «{a.name}» не запрашивалась",
             f"сначала: sm.py catalog {a.model} {a.name} --type {a.type}")
+    choices = look.get("choices") or {}
+    if choices and not a.catalog:
+        die(f"по имени «{a.name}» семантика не определилась — выбери сам",
+            "подходят: " + ", ".join(choices) + "; передай --catalog <id>"
+            " или заведи свою через sm.py catalog-new")
+    if a.catalog:
+        if choices and a.catalog not in choices:
+            die(f"семантика «{a.catalog}» не подходит по типу",
+                "подходят: " + ", ".join(choices))
+        look = dict(look)
+        look["catalog"] = a.catalog
+        look["questions"] = choices.get(a.catalog, look["questions"])
     ans = dict(x.split("=", 1) for x in (a.answer or []))
     missing = [q for q in look["questions"] if q not in ans]
     if missing:
@@ -337,7 +373,8 @@ def cmd_rule_add(a):
         return d
     if not a.evidence:
         die("нет --evidence", "правило без основания не принимается")
-    has_ref = ":" in a.evidence and any(ch.isdigit() for ch in a.evidence.split(":")[-1][:4])
+    tail = a.evidence.split(":")[-1][:6] if ":" in a.evidence else ""
+    has_ref = ":" in a.evidence and (any(ch.isdigit() for ch in tail) or "§" in a.evidence)
     status = "proven" if has_ref and not a.assumed else "assumed"
     if status == "assumed" and not a.ask:
         die("правило без ссылки file:line становится assumed и требует --ask",
@@ -443,6 +480,7 @@ def main():
     pa.add_argument("--from", dest="frm"); pa.add_argument("--desc")
     pa.add_argument("--special", nargs="*"); pa.add_argument("--env", action="store_true")
     pa.add_argument("-a", "--answer", action="append")
+    pa.add_argument("--catalog", help="id семантики, когда по имени не определилось")
     pa.add_argument("--force", action="store_true")
     pa.set_defaults(fn=cmd_param_add)
     pr = p.add_parser("rm"); pr.add_argument("model"); pr.add_argument("name")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Отчёт в markdown для чата. Читает result.json — числа те же, что в HTML."""
-import json, sys, argparse
+import json, os, sys, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import store
 
@@ -60,14 +60,33 @@ def main():
         L.append(f"  основание: {r['evidence']}")
         L.append("")
 
+    L.append("## Состояния системы")
+    L.append("")
+    if s.get("states"):
+        L.append("| состояние | строк | условие | источник |")
+        L.append("|---|---|---|---|")
+        for st in s["states"]:
+            cond = " · ".join(
+                f"{k} = {' / '.join(v) if isinstance(v, list) else v}"
+                for k, v in (st["when"] or {}).items()) or "всегда"
+            L.append(f"| **{st['name']}** | {st['rows']} | {cond} | {st['evidence']} |")
+        if s.get("no_state"):
+            L.append(f"| _без состояния_ | {s['no_state']} | ни одно не подошло | — |")
+        L.append("")
+        for st in s["states"]:
+            if st.get("desc"):
+                L.append(f"- **{st['name']}** — {st['desc']}")
+        L.append("")
+    else:
+        L.append("_состояния не описаны — каждая строка матрицы останется без исхода_")
+        L.append("")
+
     if s.get("initial"):
-        L.append("## Состояния системы")
+        L.append("### Переходы")
         L.append("")
         for i in s["initial"]:
             L.append("Начальное: " + ", ".join(f"`{k}={v}`" for k, v in i.items()
                                                if k not in s["env"]))
-        L.append("")
-        L.append(f"Событий, меняющих состояние: **{len(s.get('transitions', []))}**")
         L.append("")
         for t in s.get("transitions", []):
             w = ", ".join(f"{k}={v}" for k, v in (t["when"] or {}).items()) or "из любого"
@@ -81,13 +100,13 @@ def main():
              f"**{c['collapsed']} строк** + {c['specials']} спецзначений")
     L.append("")
     cols = d["param_order"]
-    L.append("| " + " | ".join(cols) + " | исход |")
+    L.append("| " + " | ".join(cols) + " | состояние |")
     L.append("|" + "---|" * (len(cols) + 1))
     for r in s["rows"]:
-        out = r["outcome"] or "**не описано**"
+        st = r.get("state") or "**не определено**"
         L.append("| " + " | ".join(
             "∗" if r["values"][x] == "*" else str(r["values"][x]) for x in cols)
-            + f" | {out} |")
+            + f" | {st} |")
     L.append("")
 
     if s["specials"]:
@@ -95,9 +114,9 @@ def main():
                  + ", ".join(f"`{x['param']}={x['value']}`" for x in s["specials"]))
         L.append("")
 
-    undef = [r for r in s["rows"] if r["status"] == "undefined"]
+    undef = [r for r in s["rows"] if not r.get("state")]
     if undef:
-        L.append(f"## Непокрытые истории — {len(undef)}")
+        L.append(f"## Строки без состояния — {len(undef)}")
         L.append("")
         for r in undef:
             vv = ", ".join(f"`{k}={v}`" for k, v in r["values"].items()

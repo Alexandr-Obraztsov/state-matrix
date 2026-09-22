@@ -1,0 +1,43 @@
+[
+  {
+    "id": "promo_code",
+    "matches": {
+      "names": [
+        "promo",
+        "promocode",
+        "coupon"
+      ],
+      "types": [
+        "enum"
+      ]
+    },
+    "questions": [
+      {
+        "id": "list",
+        "ask": "какие состояния промокода существуют?"
+      },
+      {
+        "id": "who",
+        "ask": "кому доступно поле промокода?"
+      },
+      {
+        "id": "expired",
+        "ask": "что происходит с истёкшим промокодом?"
+      },
+      {
+        "id": "recalc",
+        "ask": "пересчитывается ли сумма при снятии промокода?"
+      }
+    ],
+    "values": [
+      "absent",
+      "valid",
+      "expired"
+    ],
+    "special": [
+      "unknown_code",
+      "already_used"
+    ],
+    "seen": []
+  }
+]

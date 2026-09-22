@@ -8,14 +8,17 @@ def semantics(model_path):
     """Дефолтная корзина плюс проектная; проектная имеет приоритет."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cat = {c["id"]: c for c in store.load(os.path.join(root, "catalog", "default.json"))}
-    local = store.load(os.path.join(os.path.dirname(model_path) or ".", "..", "catalog.json"))
-    for c in (local or []):
-        cat[c["id"]] = c
+    d = os.path.dirname(model_path) or "."
+    for cand in (os.path.join(d, "..", "catalog.json"), os.path.join(d, "catalog.json")):
+        for c in (store.load(cand) or []):
+            cat[c["id"]] = c
     return cat
 
 
 def check(path):
     m = store.load(path)
+    if not isinstance(m, dict):
+        return [f"{path}: это не модель (ожидался объект, получен {type(m).__name__})"], []
     errs, warns = [], []
     P = m.get("params") or {}
     CAT = semantics(path)

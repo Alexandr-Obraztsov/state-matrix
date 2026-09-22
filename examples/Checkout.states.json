@@ -1,0 +1,200 @@
+{
+  "system": "Checkout",
+  "source": "examples/checkout-spec.md",
+  "mode": "spec",
+  "params": {
+    "cart": {
+      "type": "endpoint",
+      "values": [
+        "pending",
+        "ok",
+        "ok_empty",
+        "error"
+      ],
+      "from": "examples/checkout-spec.md:§2 — GET /api/cart",
+      "desc": "Ответ на запрос корзины",
+      "catalog": "http_endpoint",
+      "special": [
+        "status_422",
+        "timeout",
+        "malformed"
+      ],
+      "answers": {
+        "codes": "200, 422 при превышении лимита; остальные не описаны — спросил у пользователя",
+        "empty": "да — §2 описывает «Корзина пуста»",
+        "partial": "в спеке не сказано",
+        "timeout": "в спеке не сказано",
+        "auth": "в спеке не сказано",
+        "late": "в спеке не сказано",
+        "order": "единственный запрос",
+        "retry": "да — §2, кнопка «Повторить»"
+      }
+    },
+    "amount": {
+      "type": "number",
+      "values": [
+        "zero",
+        "min_unit",
+        "typical",
+        "over_max"
+      ],
+      "from": "examples/checkout-spec.md:§3",
+      "desc": "Сумма заказа в копейках",
+      "catalog": "money_amount",
+      "special": [
+        "negative",
+        "fractional_unit"
+      ],
+      "answers": {
+        "unit": "копейки — §3",
+        "zero": "да, бесплатный заказ — §3",
+        "negative": "в спеке не сказано",
+        "max": "999999900 копеек — §3",
+        "rounding": "в спеке не сказано"
+      }
+    },
+    "auth": {
+      "type": "enum",
+      "values": [
+        "guest",
+        "user"
+      ],
+      "from": "examples/checkout-spec.md:§4",
+      "desc": "Авторизован ли пользователь",
+      "catalog": "auth_role",
+      "answers": {
+        "roles": "гость и авторизованный — §4",
+        "anon": "да — §4",
+        "owner": "в спеке не сказано",
+        "denied": "в спеке не сказано",
+        "mid": "в спеке не сказано"
+      }
+    },
+    "viewport": {
+      "type": "enum",
+      "values": [
+        "mobile",
+        "tablet",
+        "desktop"
+      ],
+      "from": "examples/checkout-spec.md:§1",
+      "desc": "Брейкпоинт, фиксируется при загрузке",
+      "catalog": "viewport",
+      "env": true,
+      "answers": {
+        "points": "mobile/tablet/desktop — §1",
+        "runtime": "нет, §1 прямо говорит",
+        "behavior": "в спеке не сказано"
+      }
+    },
+    "promo": {
+      "type": "enum",
+      "values": [
+        "absent",
+        "valid",
+        "expired"
+      ],
+      "from": "examples/checkout-spec.md:§4",
+      "desc": "Состояние промокода",
+      "catalog": "promo_code",
+      "special": [
+        "unknown_code"
+      ],
+      "answers": {
+        "list": "нет / валидный / истёкший — §4",
+        "who": "только авторизованным — §4",
+        "expired": "перечёркивается — §4",
+        "recalc": "в спеке не сказано"
+      }
+    }
+  },
+  "excluded": {},
+  "constraints": [
+    {
+      "id": "r1",
+      "evidence": "examples/checkout-spec.md:§4 — поле промокода доступно только авторизованным",
+      "status": "proven",
+      "desc": "Гость промокод не применяет",
+      "forbid": {
+        "auth": "guest",
+        "promo": [
+          "valid",
+          "expired"
+        ]
+      }
+    },
+    {
+      "id": "r2",
+      "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
+      "status": "proven",
+      "desc": "Пока корзина не пришла, поля формы ни на что не влияют",
+      "when": {
+        "cart": [
+          "pending",
+          "error",
+          "ok_empty"
+        ]
+      },
+      "irrelevant": [
+        "amount",
+        "promo"
+      ]
+    },
+    {
+      "id": "r3",
+      "evidence": "examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты",
+      "status": "proven",
+      "desc": "У бесплатного заказа промокод бессмыслен",
+      "when": {
+        "amount": "zero"
+      },
+      "irrelevant": [
+        "promo"
+      ]
+    }
+  ],
+  "transitions": [],
+  "states": [
+    {
+      "name": "Загрузка",
+      "when": {
+        "cart": "pending"
+      },
+      "evidence": "examples/checkout-spec.md:§5",
+      "desc": "Скелетон формы"
+    },
+    {
+      "name": "Ошибка сети",
+      "when": {
+        "cart": "error"
+      },
+      "evidence": "examples/checkout-spec.md:§5",
+      "desc": "Заглушка с кнопкой «Повторить»"
+    },
+    {
+      "name": "Пустая корзина",
+      "when": {
+        "cart": "ok_empty"
+      },
+      "evidence": "examples/checkout-spec.md:§5",
+      "desc": "«Корзина пуста», заказ оформить нельзя"
+    },
+    {
+      "name": "Бесплатный заказ",
+      "when": {
+        "cart": "ok",
+        "amount": "zero"
+      },
+      "evidence": "examples/checkout-spec.md:§5",
+      "desc": "Оплата не запрашивается"
+    },
+    {
+      "name": "Оформление",
+      "when": {
+        "cart": "ok"
+      },
+      "evidence": "examples/checkout-spec.md:§5",
+      "desc": "Обычный случай"
+    }
+  ]
+}

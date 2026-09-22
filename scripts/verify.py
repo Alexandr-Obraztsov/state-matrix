@@ -5,6 +5,8 @@ import os, re, sys, argparse
 import store
 
 REF = re.compile(r"(?:^|[\s(])((?:[\w./-]+\.\w+)?):(\d+)")
+# ссылка на раздел спеки: docs/checkout.md:§2  или  docs/checkout.md:"Лимиты"
+SEC = re.compile(r"([\w./-]+\.\w+):(§[\w.\-]+|\"[^\"]+\")")
 
 
 def resolve(ref_file, source, root):
@@ -17,8 +19,27 @@ def resolve(ref_file, source, root):
     return cand if os.path.exists(cand) else os.path.join(root, ref_file)
 
 
+def check_section(text, source, root):
+    """Ссылка на раздел документа: раздел обязан в нём существовать."""
+    m = SEC.search(str(text))
+    if not m:
+        return None
+    path = resolve(m.group(1), source, root)
+    if not os.path.exists(path):
+        return "bad", f"нет файла {path}"
+    body = open(path, encoding="utf-8").read()
+    needle = m.group(2).strip('"')
+    if needle not in body:
+        return "bad", (f"{os.path.basename(path)}: раздела «{needle}» в документе нет"
+                       " — ссылка выдумана")
+    return "ok", f"{os.path.basename(path)}:{needle}"
+
+
 def check_ref(text, token, source, root):
     """-> (статус, сообщение)"""
+    sec = check_section(text, source, root)
+    if sec:
+        return sec
     m = REF.search(str(text))
     if not m:
         return "unverifiable", "нет ссылки вида file:line"
