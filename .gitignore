@@ -1,5 +1,3 @@
-.states/runs/
-.states/.session/
-.states/dirty
+.states/
 __pycache__/
 *.pyc
