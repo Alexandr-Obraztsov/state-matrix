@@ -74,3 +74,16 @@ class T(unittest.TestCase):
     def test_readme_shows_install(self):
         s = open(os.path.join(R, "README.md"), encoding="utf-8").read()
         self.assertIn("/plugin marketplace add", s)
+
+    def test_skill_requires_showing_tool_output(self):
+        """Пользователь не видит вывод тулов — агент обязан вставлять его в чат."""
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertIn("не видит", s.lower())
+        self.assertIn("целиком", s)
+
+    def test_gate_tools_say_output_is_invisible(self):
+        s = open(os.path.join(R, "scripts", "mcp_server.py"), encoding="utf-8").read()
+        for t in ("sm_params", "sm_states", "sm_show", "sm_build"):
+            i = s.index(f'tool("{t}"')
+            self.assertIn("НЕ ВИДИТ", s[i:i + 900], t)
