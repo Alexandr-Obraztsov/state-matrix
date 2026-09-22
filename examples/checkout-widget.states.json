@@ -20,7 +20,18 @@
         "timeout",
         "malformed",
         "slow_after_unmount"
-      ]
+      ],
+      "catalog": "http_endpoint",
+      "answers": {
+        "codes": "200, 401, 500",
+        "empty": "да — пустая корзина это 200 с пустым списком",
+        "partial": "да — поля скидки могут прийти null",
+        "timeout": "10 секунд",
+        "auth": "редирект на логин хоста",
+        "late": "да — ответ может прийти после ухода",
+        "order": "нет",
+        "retry": "да, идемпотентен"
+      }
     },
     "viewport": {
       "type": "enum",
@@ -84,7 +95,14 @@
         "negative",
         "fractional_unit",
         "over_int32"
-      ]
+      ],
+      "answers": {
+        "unit": "копейки, RUB",
+        "zero": "да — бесплатный заказ проходит без оплаты",
+        "negative": "нет",
+        "max": "999 999 900 копеек",
+        "rounding": "до копейки, банковское"
+      }
     },
     "network": {
       "type": "enum",

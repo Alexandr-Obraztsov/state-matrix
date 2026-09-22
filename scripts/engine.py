@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """state-matrix engine: модель -> result.json. Детерминирован, без ИИ."""
 import sys, os, json, itertools, hashlib, datetime, argparse
-import sys as _sys, os as _os
-_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import store
 from collections import deque
 

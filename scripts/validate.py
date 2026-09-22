@@ -1,20 +1,40 @@
 #!/usr/bin/env python3
 """Инварианты модели. Падает с кодом 1 на первой ошибке класса error."""
-import sys
-import sys as _sys, os as _os
-_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import store
+
+def semantics(model_path):
+    """Дефолтная корзина плюс проектная; проектная имеет приоритет."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cat = {c["id"]: c for c in store.load(os.path.join(root, "catalog", "default.json"))}
+    local = store.load(os.path.join(os.path.dirname(model_path) or ".", "..", "catalog.json"))
+    for c in (local or []):
+        cat[c["id"]] = c
+    return cat
+
 
 def check(path):
     m = store.load(path)
     errs, warns = [], []
     P = m.get("params") or {}
+    CAT = semantics(path)
     if not m.get("system"): errs.append("нет поля system")
     if not P: errs.append("нет параметров")
 
     for n, p in P.items():
         if not p.get("values"): errs.append(f"{n}: нет values")
         if not p.get("from"):   errs.append(f"{n}: нет from — источник значений не указан")
+        cid = p.get("catalog")
+        if cid:
+            if cid not in CAT:
+                errs.append(f"{n}: семантика «{cid}» отсутствует в корзине")
+            else:
+                ans = p.get("answers") or {}
+                for q in CAT[cid]["questions"]:
+                    if q["id"] not in ans:
+                        errs.append(f"{n}: нет ответа на вопрос «{q['id']}» семантики {cid}"
+                                    " — параметр добавлен в обход sm.py")
         if p.get("env") and (m.get("transitions") or []):
             for t in m["transitions"]:
                 if n in (t.get("set") or {}):

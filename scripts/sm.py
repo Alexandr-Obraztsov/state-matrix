@@ -8,8 +8,7 @@
   3. sm.py param add ... -a q=ответ ...             ← иначе отказ
 """
 import os, sys, json, argparse, datetime
-import sys as _sys, os as _os
-_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import store
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
