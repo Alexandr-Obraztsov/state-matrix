@@ -5,6 +5,7 @@
     "cart": {
       "type": "endpoint",
       "desc": "Ответ на запрос корзины",
+      "from": "examples/checkout-spec.md:§2",
       "all_values": [
         "pending",
         "ok",
@@ -18,36 +19,33 @@
         "ok_empty",
         "error"
       ],
-      "grouping": "§2 описывает обе ошибки одинаково — заглушка с кнопкой «Повторить»",
+      "grouping": "§2 описывает обе ошибки одинаково",
       "special": [
-        "timeout",
-        "malformed"
-      ],
-      "from": "examples/checkout-spec.md:§2"
+        "timeout"
+      ]
     },
     "amount": {
       "type": "number",
       "desc": "Сумма заказа в копейках",
+      "from": "examples/checkout-spec.md:§3",
       "all_values": [
         "zero",
-        "min_unit",
         "typical",
         "over_max"
       ],
       "values": [
         "zero",
-        "min_unit",
         "typical",
         "over_max"
       ],
       "special": [
         "negative"
-      ],
-      "from": "examples/checkout-spec.md:§3"
+      ]
     },
     "auth": {
       "type": "enum",
       "desc": "Авторизован ли пользователь",
+      "from": "examples/checkout-spec.md:§4",
       "all_values": [
         "guest",
         "user"
@@ -55,12 +53,12 @@
       "values": [
         "guest",
         "user"
-      ],
-      "from": "examples/checkout-spec.md:§4"
+      ]
     },
     "promo": {
       "type": "enum",
       "desc": "Состояние промокода",
+      "from": "examples/checkout-spec.md:§4",
       "all_values": [
         "absent",
         "valid",
@@ -70,34 +68,14 @@
         "absent",
         "valid",
         "expired"
-      ],
-      "from": "examples/checkout-spec.md:§4"
-    },
-    "viewport": {
-      "type": "enum",
-      "desc": "Брейкпоинт, фиксируется при загрузке",
-      "all_values": [
-        "mobile",
-        "tablet",
-        "desktop"
-      ],
-      "values": [
-        "mobile",
-        "tablet",
-        "desktop"
-      ],
-      "from": "examples/checkout-spec.md:§1",
-      "env": true
+      ]
     }
   },
-  "excluded": {
-    "кнопка Повторить": "элемент интерфейса, не вход системы"
-  },
+  "excluded": {},
   "constraints": [
     {
       "id": "r1",
-      "evidence": "examples/checkout-spec.md:§4 — поле промокода доступно только авторизованным",
-      "status": "proven",
+      "evidence": "examples/checkout-spec.md:§4",
       "desc": "Гость промокод не применяет",
       "forbid": {
         "auth": "guest",
@@ -109,9 +87,8 @@
     },
     {
       "id": "r2",
-      "evidence": "examples/checkout-spec.md:§2 — до загрузки корзины форма не рендерится",
-      "status": "proven",
-      "desc": "Пока корзина не пришла, поля формы ни на что не влияют",
+      "evidence": "examples/checkout-spec.md:§2",
+      "desc": "До загрузки форма не рендерится",
       "when": {
         "cart": [
           "pending",
@@ -124,28 +101,15 @@
         "promo",
         "auth"
       ]
-    },
-    {
-      "id": "r3",
-      "evidence": "examples/checkout-spec.md:§3 — бесплатный заказ оформляется без выбора оплаты",
-      "status": "proven",
-      "desc": "У бесплатного заказа промокод бессмыслен",
-      "when": {
-        "amount": "zero"
-      },
-      "irrelevant": [
-        "promo"
-      ]
     }
   ],
-  "transitions": [],
   "states": [
     {
       "name": "Загрузка",
       "when": {
         "cart": "pending"
       },
-      "desc": "Скелетон формы, кнопка оплаты скрыта",
+      "desc": "Скелетон формы",
       "evidence": "examples/checkout-spec.md:§5"
     },
     {
@@ -153,7 +117,7 @@
       "when": {
         "cart": "error"
       },
-      "desc": "Заглушка с кнопкой «Повторить», формы нет",
+      "desc": "Заглушка с повтором",
       "evidence": "examples/checkout-spec.md:§5"
     },
     {
@@ -161,7 +125,7 @@
       "when": {
         "cart": "ok_empty"
       },
-      "desc": "«Корзина пуста» и ссылка в каталог, оформить нельзя",
+      "desc": "«Корзина пуста»",
       "evidence": "examples/checkout-spec.md:§5"
     },
     {
@@ -170,24 +134,15 @@
         "cart": "ok",
         "amount": "zero"
       },
-      "desc": "Блок оплаты скрыт, кнопка «Оформить бесплатно»",
+      "desc": "Оплата не запрашивается",
       "evidence": "examples/checkout-spec.md:§5"
-    },
-    {
-      "name": "Промокод истёк",
-      "when": {
-        "cart": "ok",
-        "promo": "expired"
-      },
-      "desc": "Промокод перечёркнут, сумма пересчитана обратно",
-      "evidence": "examples/checkout-spec.md:§4"
     },
     {
       "name": "Оформление",
       "when": {
         "cart": "ok"
       },
-      "desc": "Форма оплаты, поле промокода видно только авторизованным",
+      "desc": "Форма оплаты",
       "evidence": "examples/checkout-spec.md:§5"
     }
   ]

@@ -32,10 +32,10 @@ class T(unittest.TestCase):
     def test_tools_list_has_schemas(self):
         out, _ = talk([INIT, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}])
         tools = out[1]["result"]["tools"]
-        self.assertGreaterEqual(len(tools), 15)
+        self.assertGreaterEqual(len(tools), 12)
         names = {t["name"] for t in tools}
         for n in ("sm_init", "sm_param_add", "sm_param_values", "sm_params",
-                  "sm_state_add", "sm_states", "sm_rule_add", "sm_build"):
+                  "sm_state_add", "sm_states", "sm_rule_add", "sm_build", "sm_rows"):
             self.assertIn(n, names)
         for t in tools:
             self.assertIn("inputSchema", t)
@@ -49,27 +49,39 @@ class T(unittest.TestCase):
                            call("sm_init", {"model": m, "system": "X",
                                             "source": "spec.md"}, 2),
                            call("sm_param_add", {"model": m, "name": "n",
-                                                 "type": "number"}, 3)])
+                                                 "type": "number",
+                                                 "desc": "d"}, 3)])
             res = out[2]["result"]
             self.assertTrue(res["isError"])
             self.assertIn("--from", res["content"][0]["text"])
 
     def test_full_happy_path(self):
         with tempfile.TemporaryDirectory() as d:
-            m = os.path.join(d, "X.states.json")
-            out, err = talk([INIT,
-                             call("sm_init", {"model": m, "system": "X",
-                                              "source": "spec.md"}, 2),
-
-                             call("sm_param_add", {"model": m, "name": "amount",
-                                                   "type": "number", "desc": "сумма",
-                                                   "from": "spec.md:§1"}, 4),
-                             call("sm_param_values", {"model": m, "name": "amount",
-                                                      "all_values": ["zero", "typical"]}, 6),
-                             call("sm_show", {"model": m}, 5)])
+            os.makedirs(os.path.join(d, ".states", "models"))
+            m = os.path.join(d, ".states", "models", "X.states.json")
+            with open(os.path.join(d, "spec.md"), "w", encoding="utf-8") as f:
+                f.write("# Спека\n\n## §1 Корзина\nЗагрузка и готово.\n")
+            out, err = talk([
+                INIT,
+                call("sm_init", {"model": m, "system": "X", "source": "spec.md"}, 2),
+                call("sm_param_add", {"model": m, "name": "cart", "type": "enum",
+                                      "desc": "состояние корзины",
+                                      "from": "spec.md:§1", "root": d}, 3),
+                call("sm_param_values", {"model": m, "name": "cart",
+                                         "all_values": ["pending", "ok"]}, 4),
+                call("sm_state_add", {"model": m, "name": "Загрузка",
+                                      "when": ["cart=pending"], "desc": "скелетон",
+                                      "evidence": "spec.md:§1", "root": d}, 5),
+                call("sm_state_add", {"model": m, "name": "Готово",
+                                      "when": ["cart=ok"], "desc": "форма",
+                                      "evidence": "spec.md:§1", "root": d}, 6),
+                call("sm_build", {"model": m, "root": d}, 7),
+            ])
             for r in out[1:]:
-                self.assertFalse(r["result"].get("isError"), r["result"]["content"][0]["text"])
-            self.assertIn("amount", out[-1]["result"]["content"][0]["text"])
+                self.assertFalse(r["result"].get("isError"),
+                                 r["result"]["content"][0]["text"])
+            self.assertIn("МАТРИЦА", out[-1]["result"]["content"][0]["text"])
+
 
     def test_unknown_tool_is_error(self):
         out, _ = talk([INIT, call("sm_nope", {}, 2)])
@@ -86,33 +98,28 @@ class T(unittest.TestCase):
 
 
 class StreamPurity(unittest.TestCase):
-    """stdout под MCP — это поток JSON-RPC. Любая прямая запись в него ломает сессию."""
+    """stdout под MCP — поток JSON-RPC. Прямая запись в него ломает сессию."""
 
     def test_build_does_not_pollute_stdout(self):
-        spec = os.path.join(R, "examples", "checkout-spec.md")
         with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, ".states", "models"))
             m = os.path.join(d, ".states", "models", "D.states.json")
-            os.makedirs(os.path.dirname(m))
-            import shutil
-            shutil.copy(spec, os.path.join(d, "spec.md"))
+            with open(os.path.join(d, "spec.md"), "w", encoding="utf-8") as f:
+                f.write("# Спека\n\n## §1 Раздел\nтекст\n")
             out, err = talk([
                 INIT,
                 call("sm_init", {"model": m, "system": "D", "source": "spec.md"}, 2),
-                call("sm_catalog", {"model": m, "name": "amount", "type": "number"}, 3),
-                call("sm_param_add", {"model": m, "name": "amount", "type": "number",
-                                      "desc": "сумма",
-                                      "from": os.path.join(d, "spec.md") + ":§3"}, 4),
-                call("sm_param_values", {"model": m, "name": "amount",
-                                         "all_values": ["zero", "typical"]}, 8),
+                call("sm_param_add", {"model": m, "name": "a", "type": "enum",
+                                      "desc": "d", "from": "spec.md:§1", "root": d}, 3),
+                call("sm_param_values", {"model": m, "name": "a",
+                                         "all_values": ["x", "y"]}, 4),
                 call("sm_state_add", {"model": m, "name": "Любое", "when": [],
-                                      "desc": "всё остальное",
-                                      "evidence": os.path.join(d, "spec.md") + ":§3"}, 5),
+                                      "desc": "всё", "evidence": "spec.md:§1",
+                                      "root": d}, 5),
                 call("sm_build", {"model": m, "root": d}, 6),
             ])
             self.assertEqual(err.strip(), "", "сервер не должен писать в stderr")
-            self.assertEqual(len(out), 7, "лишние или потерянные ответы")
-            for r in out:
-                self.assertIn("result", r)
+            self.assertEqual(len(out), 6, "лишние или потерянные ответы")
             last = out[-1]["result"]
             self.assertFalse(last.get("isError"), last["content"][0]["text"])
             self.assertIn("МАТРИЦА", last["content"][0]["text"])

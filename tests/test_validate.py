@@ -1,93 +1,102 @@
+"""Инварианты модели и проверка ссылок."""
 import os, sys, tempfile, unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import store, validate
 
-CAT = os.path.join(os.path.dirname(__file__), "..", "catalog", "default.json")
+SPEC = "# Спека\n\n## §1 Раздел\nтекст\n"
 
 
-def m(**kw):
-    base = {"system": "T", "source": "a.ts", "params": {}, "constraints": []}
-    base.update(kw)
-    return base
+def param(**kw):
+    p = {"type": "enum", "desc": "d", "from": "spec.md:§1",
+         "all_values": ["a"], "values": ["a"]}
+    p.update(kw)
+    return p
+
+
+def state(**kw):
+    s = {"name": "S", "when": {"x": "a"}, "desc": "видно", "evidence": "spec.md:§1"}
+    s.update(kw)
+    return s
 
 
 class T(unittest.TestCase):
-    def check(self, model):
+    def check(self, params=None, constraints=None, states=None):
         with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "spec.md"), "w", encoding="utf-8") as f:
+                f.write(SPEC)
             p = os.path.join(d, "m.states.json")
-            store.save(p, model)
-            return validate.check(p)
+            store.save(p, {"system": "T", "source": "spec.md",
+                           "params": params if params is not None else {"x": param()},
+                           "constraints": constraints or [],
+                           "states": states if states is not None else [state()]})
+            return validate.check(p, d)
 
-    def test_param_without_from_is_error(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
-                                          "all_values": ["a"]}}))
-        self.assertTrue(any("from" in z for z in e), e)
+    def test_clean_model_passes(self):
+        e, w = self.check()
+        self.assertEqual(e, [])
 
-    def test_param_without_values_is_error(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "desc": "d", "from": "a.md:1"}}))
-        self.assertTrue(any("нет values" in z for z in e), e)
-
-    def test_state_without_evidence_is_error(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
-                                          "all_values": ["a"], "from": "a.md:1"}},
-                            states=[{"name": "S", "when": {"x": "a"}, "desc": "d"}]))
-        self.assertTrue(any("evidence" in z for z in e), e)
-
-    def test_state_without_desc_is_error(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
-                                          "all_values": ["a"], "from": "a.md:1"}},
-                            states=[{"name": "S", "when": {"x": "a"},
-                                     "evidence": "a.md:1"}]))
+    def test_param_without_desc(self):
+        e, w = self.check({"x": param(desc=None)})
         self.assertTrue(any("desc" in z for z in e), e)
 
-    def test_catchall_state_must_be_last(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
-                                          "all_values": ["a"], "from": "a.md:1"}},
-                            states=[{"name": "Все", "when": {}, "desc": "d",
-                                     "evidence": "a.md:1"},
-                                    {"name": "Частный", "when": {"x": "a"}, "desc": "d",
-                                     "evidence": "a.md:1"}]))
-        self.assertTrue(any("не последнее" in z for z in e), e)
+    def test_param_without_values(self):
+        p = param(); del p["values"]
+        e, w = self.check({"x": p})
+        self.assertTrue(any("значения не заданы" in z for z in e), e)
 
-    def test_duplicate_state_name_is_error(self):
-        st = {"name": "S", "when": {"x": "a"}, "desc": "d", "evidence": "a.md:1"}
-        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
-                                          "all_values": ["a"], "from": "a.md:1"}},
-                            states=[st, dict(st)]))
-        self.assertTrue(any("повторяется" in z for z in e), e)
-
-    def test_no_states_is_warning(self):
-        e, w = self.check(m(params={"x": {"type": "enum", "values": ["a"],
-                                          "all_values": ["a"], "from": "a.md:1"}}))
-        self.assertTrue(any("состояния" in z for z in w), w)
-
-
-class Grouping(unittest.TestCase):
-    """Все значения перечисляются до объединения, объединение объясняется."""
-
-    def check(self, params):
-        with tempfile.TemporaryDirectory() as d:
-            p = os.path.join(d, "m.states.json")
-            store.save(p, {"system": "T", "source": "a.md", "params": params,
-                           "constraints": []})
-            return validate.check(p)
-
-    def test_missing_all_values_is_error(self):
-        e, w = self.check({"x": {"type": "enum", "values": ["a"], "from": "a.md:1"}})
+    def test_param_without_all_values(self):
+        p = param(); del p["all_values"]
+        e, w = self.check({"x": p})
         self.assertTrue(any("all_values" in z for z in e), e)
 
-    def test_grouping_required_when_collapsed(self):
-        e, w = self.check({"x": {"type": "enum", "all_values": ["a", "b", "c"],
-                                 "values": ["a", "bc"], "from": "a.md:1"}})
+    def test_collapse_without_grouping(self):
+        e, w = self.check({"x": param(all_values=["a", "b"], values=["a"])})
         self.assertTrue(any("без объяснения" in z for z in e), e)
 
-    def test_grouping_present_is_ok(self):
-        e, w = self.check({"x": {"type": "enum", "all_values": ["a", "b", "c"],
-                                 "values": ["a", "bc"], "from": "a.md:1",
-                                 "grouping": "b и c дают один исход по §2"}})
-        self.assertEqual([z for z in e if "объяснения" in z], [])
+    def test_invented_section_caught(self):
+        e, w = self.check({"x": param(**{"from": "spec.md:§99"})})
+        self.assertTrue(any("выдумана" in z for z in e), e)
 
-    def test_no_collapse_needs_no_grouping(self):
-        e, w = self.check({"x": {"type": "enum", "all_values": ["a", "b"],
-                                 "values": ["a", "b"], "from": "a.md:1"}})
+    def test_missing_file_caught(self):
+        e, w = self.check({"x": param(**{"from": "nowhere.md:§1"})})
+        self.assertTrue(any("нет файла" in z for z in e), e)
+
+    def test_reference_without_anchor_caught(self):
+        e, w = self.check({"x": param(**{"from": "просто текст"})})
+        self.assertTrue(any("нет ссылки" in z for z in e), e)
+
+    def test_state_without_evidence(self):
+        s = state(); del s["evidence"]
+        e, w = self.check(states=[s])
+        self.assertTrue(any("evidence" in z for z in e), e)
+
+    def test_state_without_desc(self):
+        s = state(); del s["desc"]
+        e, w = self.check(states=[s])
+        self.assertTrue(any("desc" in z for z in e), e)
+
+    def test_state_unknown_value(self):
+        e, w = self.check(states=[state(when={"x": "нет_такого"})])
+        self.assertTrue(any("отсутствует" in z for z in e), e)
+
+    def test_duplicate_state_names(self):
+        e, w = self.check(states=[state(), state()])
+        self.assertTrue(any("повторяется" in z for z in e), e)
+
+    def test_catchall_must_be_last(self):
+        e, w = self.check(states=[state(name="Все", when={}), state(name="Частное")])
+        self.assertTrue(any("не последнее" in z for z in e), e)
+
+    def test_no_states_is_warning(self):
+        e, w = self.check(states=[])
         self.assertEqual(e, [])
+        self.assertTrue(any("состояния" in z for z in w), w)
+
+    def test_rule_without_evidence(self):
+        e, w = self.check(constraints=[{"id": "r", "forbid": {"x": "a"}}])
+        self.assertTrue(any("evidence" in z for z in e), e)
+
+    def test_rule_unknown_param(self):
+        e, w = self.check(constraints=[{"id": "r", "forbid": {"нет": "a"},
+                                        "evidence": "spec.md:§1"}])
+        self.assertTrue(any("неизвестный параметр" in z for z in e), e)
