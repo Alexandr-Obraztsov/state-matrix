@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Инварианты модели. Падает с кодом 1 на первой ошибке класса error."""
-import sys, yaml
+import sys
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import store
 
 def check(path):
-    m = yaml.safe_load(open(path))
+    m = store.load(path)
     errs, warns = [], []
     P = m.get("params") or {}
     if not m.get("system"): errs.append("нет поля system")

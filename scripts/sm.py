@@ -8,10 +8,12 @@
   3. sm.py param add ... -a q=ответ ...             ← иначе отказ
 """
 import os, sys, json, argparse, datetime
-import yaml
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import store
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_CATALOG = os.path.join(ROOT, "catalog", "default.yaml")
+DEFAULT_CATALOG = os.path.join(ROOT, "catalog", "default.json")
 
 
 def die(msg, hint=""):
@@ -24,12 +26,12 @@ def die(msg, hint=""):
 def load_model(p):
     if not os.path.exists(p):
         return {}
-    return yaml.safe_load(open(p)) or {}
+    return store.load(p) or {}
 
 
 def save_model(p, m):
     os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
-    yaml.safe_dump(m, open(p, "w"), allow_unicode=True, sort_keys=False, width=100)
+    store.save(p, m)
 
 
 def ledger_path(model):
@@ -48,10 +50,10 @@ def save_ledger(model, L):
 
 
 def catalogs(project_dir):
-    out = yaml.safe_load(open(DEFAULT_CATALOG)) or []
-    local = os.path.join(project_dir, "catalog.yaml")
+    out = store.load(DEFAULT_CATALOG) or []
+    local = os.path.join(project_dir, "catalog.json")
     if os.path.exists(local):
-        out = (yaml.safe_load(open(local)) or []) + out
+        out = (store.load(local) or []) + out
     return out
 
 
@@ -206,7 +208,7 @@ def cmd_build(a):
     steps = [["python3", sc("verify.py"), a.model, "--root", a.root],
              ["python3", sc("validate.py"), a.model],
              ["python3", sc("engine.py"), a.model, "-a",
-              os.path.join(os.path.dirname(a.model) or ".", "..", "answers.yaml"), "-o", out]]
+              os.path.join(os.path.dirname(a.model) or ".", "..", "answers.json"), "-o", out]]
     for cmd in steps:
         r = subprocess.run(cmd, text=True)
         if r.returncode:

@@ -1,0 +1,272 @@
+{
+  "system": "CommentComposer",
+  "source": "src/components/CommentComposer.tsx",
+  "mode": "code",
+  "params": {
+    "value": {
+      "type": "string",
+      "desc": "Текст комментария. Пустая строка и строка из одних пробелов разведены намеренно: предпросмотр их не различает, а отправка различает.",
+      "catalog": "free_text",
+      "values": [
+        "empty",
+        "blank",
+        "text",
+        "text_with_image"
+      ],
+      "from": "CommentComposer.tsx:27 — const [value, setValue] = useState(\"\")",
+      "special": [
+        "emoji",
+        "long_word_no_spaces",
+        "markdown_injection",
+        "newlines"
+      ]
+    },
+    "preview": {
+      "type": "boolean",
+      "desc": "Режим предпросмотра. В нём вместо textarea рендерится markdown, кнопки форматирования заблокированы.",
+      "values": [
+        true,
+        false
+      ],
+      "from": "CommentComposer.tsx:28 — const [preview, setPreview] = useState(false)"
+    },
+    "dragOver": {
+      "type": "boolean",
+      "desc": "Над компонентом тащат файл. Подсвечивает рамку. Обработчик висит на внешнем div и не знает про preview.",
+      "values": [
+        true,
+        false
+      ],
+      "from": "CommentComposer.tsx:29 — const [dragOver, setDragOver] = useState(false)"
+    },
+    "selection": {
+      "type": "enum",
+      "desc": "Выделение в поле ввода. Влияет на то, что сделают кнопки форматирования: обернут выделенное или подставят плейсхолдер.",
+      "values": [
+        "none",
+        "inline",
+        "multiline"
+      ],
+      "from": "CommentComposer.tsx:35 — selectionStart/selectionEnd в apply()"
+    },
+    "light": {
+      "type": "boolean",
+      "desc": "Светлая тема. Приходит из props, в рантайме компонентом не меняется — потому окружение, а не состояние.",
+      "env": true,
+      "values": [
+        true,
+        false
+      ],
+      "from": "CommentComposer.tsx:21 — light: boolean в Props"
+    }
+  },
+  "excluded": {
+    "title": "строка в шапке, ветвления не порождает (:18)",
+    "submitLabel": "подпись кнопки, ветвления не порождает (:19)",
+    "placeholder": "виден только при value=empty, отдельного исхода не даёт (:20)",
+    "area": "useRef на DOM-узел, не состояние (:30)",
+    "onSubmit": "колбэк; его поведение — зона ответственности родителя (:22)",
+    "onCancel": "колбэк; его поведение — зона ответственности родителя (:23)"
+  },
+  "constraints": [
+    {
+      "id": "k1",
+      "forbid": {
+        "value": "empty",
+        "selection": [
+          "inline",
+          "multiline"
+        ]
+      },
+      "desc": "В пустом поле нечего выделять",
+      "evidence": "CommentComposer.tsx:35 — в пустом поле selectionStart == selectionEnd",
+      "status": "proven"
+    },
+    {
+      "id": "k2",
+      "when": {
+        "preview": true
+      },
+      "irrelevant": [
+        "selection"
+      ],
+      "desc": "В режиме предпросмотра выделения не существует",
+      "evidence": "CommentComposer.tsx:143 — в ветке preview textarea не рендерится",
+      "status": "proven"
+    },
+    {
+      "id": "k3",
+      "when": {
+        "value": [
+          "empty",
+          "blank"
+        ]
+      },
+      "irrelevant": [
+        "dragOver"
+      ],
+      "desc": "В пустом поле перетаскивание ничего не меняет",
+      "ask": "в пустом поле перетаскивание ведёт себя так же, как в заполненном?",
+      "evidence": "предположение: подсветка рамки одинакова (:82)",
+      "status": "assumed"
+    }
+  ],
+  "initial": {
+    "value": "empty",
+    "preview": false,
+    "dragOver": false,
+    "selection": "none"
+  },
+  "transitions": [
+    {
+      "event": "type",
+      "when": {
+        "preview": false
+      },
+      "set": {
+        "value": "text",
+        "selection": "none"
+      },
+      "evidence": "CommentComposer.tsx:148 — onChange setValue"
+    },
+    {
+      "event": "typeSpaces",
+      "when": {
+        "preview": false
+      },
+      "set": {
+        "value": "blank",
+        "selection": "none"
+      },
+      "evidence": "CommentComposer.tsx:148 — пробелы тоже валидный ввод"
+    },
+    {
+      "event": "clear",
+      "when": {
+        "preview": false
+      },
+      "set": {
+        "value": "empty",
+        "selection": "none"
+      },
+      "evidence": "CommentComposer.tsx:148 — onChange setValue"
+    },
+    {
+      "event": "select",
+      "when": {
+        "preview": false,
+        "value": [
+          "blank",
+          "text",
+          "text_with_image"
+        ]
+      },
+      "set": {
+        "selection": "inline"
+      },
+      "evidence": "CommentComposer.tsx:35 — selectionStart"
+    },
+    {
+      "event": "selectLines",
+      "when": {
+        "preview": false,
+        "value": [
+          "blank",
+          "text",
+          "text_with_image"
+        ]
+      },
+      "set": {
+        "selection": "multiline"
+      },
+      "evidence": "CommentComposer.tsx:38 — wrap.block разбивает по строкам"
+    },
+    {
+      "event": "togglePreview",
+      "set": {
+        "preview": "!preview"
+      },
+      "evidence": "CommentComposer.tsx:123 — setPreview(v => !v)"
+    },
+    {
+      "event": "dragEnter",
+      "set": {
+        "dragOver": true
+      },
+      "evidence": "CommentComposer.tsx:82 — onDragOver на внешнем div, guard на preview отсутствует"
+    },
+    {
+      "event": "dragLeave",
+      "when": {
+        "dragOver": true
+      },
+      "set": {
+        "dragOver": false
+      },
+      "evidence": "CommentComposer.tsx:83 — onDragLeave"
+    },
+    {
+      "event": "dropImage",
+      "when": {
+        "dragOver": true
+      },
+      "set": {
+        "dragOver": false,
+        "value": "text_with_image"
+      },
+      "evidence": "CommentComposer.tsx:84 — onDrop вызывает attach()"
+    },
+    {
+      "event": "pasteImage",
+      "when": {
+        "preview": false
+      },
+      "set": {
+        "value": "text_with_image"
+      },
+      "evidence": "CommentComposer.tsx:62 — onPaste"
+    }
+  ],
+  "states": [
+    {
+      "name": "Приём файла",
+      "when": {
+        "preview": false,
+        "dragOver": true
+      },
+      "desc": "Над полем тащат файл: рамка подсвечена акцентным цветом, компонент готов принять изображение.",
+      "evidence": "CommentComposer.tsx:80 — borderColor по dragOver"
+    },
+    {
+      "name": "Предпросмотр пустого",
+      "when": {
+        "preview": true,
+        "dragOver": false,
+        "value": [
+          "empty",
+          "blank"
+        ]
+      },
+      "desc": "Вместо разметки показано «Пусто» — value.trim() пуст. Заметь: строка из пробелов сюда попадает, а отправка её пропустит.",
+      "evidence": "CommentComposer.tsx:139"
+    },
+    {
+      "name": "Предпросмотр разметки",
+      "when": {
+        "preview": true,
+        "dragOver": false
+      },
+      "desc": "Отрендеренный markdown вместо поля ввода, кнопки форматирования заблокированы.",
+      "evidence": "CommentComposer.tsx:137"
+    },
+    {
+      "name": "Редактирование",
+      "when": {
+        "preview": false,
+        "dragOver": false
+      },
+      "desc": "Обычное поле ввода: работают кнопки форматирования, вставка из буфера, отправка по Cmd+Enter.",
+      "evidence": "CommentComposer.tsx:143"
+    }
+  ]
+}

@@ -1,13 +1,13 @@
 import json, os, subprocess, sys, unittest, tempfile
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(R, "scripts"))
-import yaml, engine
+import store, engine
 
-MODEL = os.path.join(R, "examples", "checkout-widget.states.yaml")
+MODEL = os.path.join(R, "examples", "checkout-widget.states.json")
 
 
 def run(answers=None):
-    m = yaml.safe_load(open(MODEL))
+    m = store.load(MODEL)
     return engine.build(m, answers or {})
 
 

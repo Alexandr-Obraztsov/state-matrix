@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Проверяет ссылки модели: файл существует, строка существует, на ней (±2)
 упомянут параметр. Ловит выдуманные цитаты. Плюс покрытие кандидатов extract.py."""
-import os, re, sys, argparse, yaml
+import os, re, sys, argparse
+import store
 
 REF = re.compile(r"(?:^|[\s(])((?:[\w./-]+\.\w+)?):(\d+)")
 
@@ -55,7 +56,7 @@ def main():
     ap.add_argument("--root", default=".")
     ap.add_argument("--target", help="файл для проверки покрытия (по умолчанию source модели)")
     a = ap.parse_args()
-    m = yaml.safe_load(open(a.model))
+    m = store.load(a.model)
     src = m.get("source", "")
     errs, susp, unv, ok = [], [], [], 0
 

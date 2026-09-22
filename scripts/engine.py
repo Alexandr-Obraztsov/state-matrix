@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""state-matrix engine: model.yaml -> result.json. Детерминирован, без ИИ."""
+"""state-matrix engine: модель -> result.json. Детерминирован, без ИИ."""
 import sys, os, json, itertools, hashlib, datetime, argparse
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import store
 from collections import deque
-import yaml
 
-CEILING = 200
+from store import CEILING
 UNREACHABLE_GUARD = 0.5
 
 
@@ -437,10 +439,10 @@ def main():
     ap.add_argument("-o", "--out")
     ap.add_argument("-a", "--answers")
     a = ap.parse_args()
-    model = yaml.safe_load(open(a.model))
+    model = store.load(a.model)
     answers = {}
     if a.answers and os.path.exists(a.answers):
-        answers = yaml.safe_load(open(a.answers)) or {}
+        answers = store.load(a.answers) or {}
     res = build(model, answers)
     text = json.dumps(res, ensure_ascii=False, indent=2, sort_keys=False)
     if a.out:
