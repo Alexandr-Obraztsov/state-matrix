@@ -43,33 +43,63 @@ TOOLS = [
           "type": S("тип: string, number, enum, boolean, endpoint, array, date, file")},
          ["model", "name", "type"], sm.cmd_catalog),
 
-    tool("sm_catalog_list", "Показать всю корзину семантик.",
-         {"type": S("необязательный фильтр по типу")}, [], sm.cmd_catalog_list,
+    tool("sm_catalog_list",
+         "Список типов параметров: идентификатор, название, описание. Вопросы не "
+         "показывает — их даёт sm_catalog_get по выбранному типу.",
+         {"type": S("необязательный фильтр по типу значения")}, [], sm.cmd_catalog_list,
          {"model": ".", "type": None}),
 
+    tool("sm_catalog_get",
+         "Карточка типа: все его вопросы, значения по умолчанию, спецзначения "
+         "и типичные имена. У каждого вопроса есть варианты ответа — предлагай их "
+         "пользователю, а не спрашивай открытым текстом.",
+         {"model": MODEL, "id": S("идентификатор типа, например http_endpoint")},
+         ["model", "id"], sm.cmd_catalog_get),
+
+    tool("sm_catalog_edit",
+         "Дополнить существующий тип. Вызывай это КАЖДЫЙ РАЗ, когда пользователь "
+         "задал вопрос, которого не было в типе, или поправил тебя по существу: "
+         "тогда в следующий раз вопрос задастся сам. Правка ложится в проектную "
+         "корзину и переживает обновление плагина.",
+         {"model": MODEL, "id": S("идентификатор типа"),
+          "add_questions": SL("новые вопросы: id=текст вопроса?|вариант|вариант"),
+          "add_names": SL("имена параметров, по которым этот тип должен находиться"),
+          "add_values": SL("новые классы значений"),
+          "add_special": SL("новые спецзначения"),
+          "desc": S("уточнённое описание типа")},
+         ["model", "id"], sm.cmd_catalog_edit),
+
     tool("sm_catalog_new",
-         "Завести свою семантику в проектной корзине, когда ни одна не подошла. "
+         "Завести новый тип параметра, когда ни один существующий не подошёл. "
+         "Нужны название и описание — по ним тип выбирают из списка. "
          "Вопросы обязаны заканчиваться знаком вопроса.",
-         {"model": MODEL, "id": S("идентификатор семантики, например order_status"),
+         {"model": MODEL, "id": S("идентификатор, например order_status"),
+          "title": S("название по-русски, например «Статус заказа»"),
+          "desc": S("что это за вид параметра и какие у него ловушки"),
           "type": S("тип параметров этой семантики"),
           "names": SL("типичные имена параметров"),
-          "questions": SL("вопросы в виде id=текст вопроса?"),
+          "questions": SL("вопросы: id=текст вопроса?|вариант|вариант"),
           "values": SL("классы значений"), "special": SL("спецзначения вне матрицы")},
-         ["model", "id", "type", "questions"], sm.cmd_catalog_new),
+         ["model", "id", "title", "desc", "type", "questions"], sm.cmd_catalog_new),
 
     tool("sm_param_add",
          "Добавить параметр. Откажет, если для этого имени не вызывали sm_catalog "
          "или не отвечены все вопросы семантики. Ответ ищи в типе, схеме, спеке; "
          "если нигде нет — спроси пользователя, а не пиши «неизвестно».",
          {"model": MODEL, "name": S("имя"), "type": S("тип"),
+          "all_values": SL("ВСЕ возможные значения параметра из спеки, до объединения. "
+                           "Перечисли их прежде, чем сворачивать в классы."),
           "values": SL("классы значений, идущие в матрицу"),
+          "grouping": S("почему значения объединены в классы — обязательно, "
+                        "если классов меньше, чем значений"),
           "special": SL("спецзначения: проверяются по одному, вне произведения"),
           "from": S("источник: file.ts:27 или docs/spec.md:§3"),
           "desc": S("что это и почему значения такие"),
           "answers": SL("ответы на вопросы семантики в виде id=ответ"),
           "catalog": S("id семантики, если по имени не определилась"),
           "env": B("параметр не меняется в рантайме: делит матрицу на срезы")},
-         ["model", "name", "type", "values", "from", "answers"], sm.cmd_param_add),
+         ["model", "name", "type", "all_values", "values", "from", "answers"],
+         sm.cmd_param_add),
 
     tool("sm_param_rm", "Убрать параметр и все ссылающиеся на него правила.",
          {"model": MODEL, "name": S("имя")}, ["model", "name"], sm.cmd_param_rm),
@@ -158,7 +188,8 @@ def run_tool(t, args):
     if "from" in ns:
         ns["frm"] = ns.pop("from")
     for k in ("forbid", "when", "irrelevant", "set", "names", "questions",
-              "values", "special", "answer"):
+              "values", "special", "answer", "all_values", "add_questions", "add_names",
+              "add_values", "add_special", "title", "id"):
         ns.setdefault(k, None)
     ns.setdefault("force", False)
     ns.setdefault("assumed", False)
@@ -166,6 +197,7 @@ def run_tool(t, args):
     ns.setdefault("desc", None)
     ns.setdefault("ask", None)
     ns.setdefault("catalog", None)
+    ns.setdefault("grouping", None)
     ns.setdefault("evidence", None)
 
     out, err = io.StringIO(), io.StringIO()

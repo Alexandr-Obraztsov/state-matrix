@@ -4,14 +4,19 @@
   "params": {
     "cart": {
       "type": "endpoint",
-      "endpoint": "GET /api/cart",
+      "catalog": "http_endpoint",
+      "all_values": [
+        "pending",
+        "ok",
+        "ok_empty",
+        "error"
+      ],
       "values": [
         "pending",
         "ok",
         "ok_empty",
         "error"
       ],
-      "from": "Checkout.tsx:44 useCart()",
       "special": [
         "ok_partial",
         "status_401",
@@ -20,7 +25,7 @@
         "malformed",
         "slow_after_unmount"
       ],
-      "catalog": "http_endpoint",
+      "from": "Checkout.tsx:44 useCart()",
       "answers": {
         "codes": "200, 401, 500",
         "empty": "да — пустая корзина это 200 с пустым списком",
@@ -34,25 +39,38 @@
     },
     "viewport": {
       "type": "enum",
-      "env": true,
+      "all_values": [
+        "mobile",
+        "tablet",
+        "desktop"
+      ],
       "values": [
         "mobile",
         "tablet",
         "desktop"
       ],
-      "from": "useBreakpoint.ts:12 matchMedia"
+      "from": "useBreakpoint.ts:12 matchMedia",
+      "env": true
     },
     "hostVersion": {
       "type": "contract",
-      "env": true,
+      "all_values": [
+        "v1",
+        "v2"
+      ],
       "values": [
         "v1",
         "v2"
       ],
-      "from": "bootstrap.ts:8 window.__HOST__.version"
+      "from": "bootstrap.ts:8 window.__HOST__.version",
+      "env": true
     },
     "auth": {
       "type": "enum",
+      "all_values": [
+        "guest",
+        "user"
+      ],
       "values": [
         "guest",
         "user"
@@ -61,18 +79,28 @@
     },
     "payMethod": {
       "type": "enum",
+      "all_values": [
+        "card",
+        "sbp",
+        "cash"
+      ],
       "values": [
         "card",
         "sbp",
         "cash"
       ],
-      "from": "Checkout.tsx:61 methods[]",
       "special": [
         "unknown_value"
-      ]
+      ],
+      "from": "Checkout.tsx:61 methods[]"
     },
     "promo": {
       "type": "enum",
+      "all_values": [
+        "absent",
+        "valid",
+        "expired"
+      ],
       "values": [
         "absent",
         "valid",
@@ -83,18 +111,24 @@
     "amount": {
       "type": "number",
       "catalog": "money_amount",
+      "all_values": [
+        "zero",
+        "min_unit",
+        "typical",
+        "over_max"
+      ],
       "values": [
         "zero",
         "min_unit",
         "typical",
         "over_max"
       ],
-      "from": "cart.total, копейки",
       "special": [
         "negative",
         "fractional_unit",
         "over_int32"
       ],
+      "from": "cart.total, копейки",
       "answers": {
         "unit": "копейки, RUB",
         "zero": "да — бесплатный заказ проходит без оплаты",
@@ -105,6 +139,10 @@
     },
     "network": {
       "type": "enum",
+      "all_values": [
+        "online",
+        "offline"
+      ],
       "values": [
         "online",
         "offline"

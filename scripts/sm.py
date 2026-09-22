@@ -54,15 +54,49 @@ def project_catalog(model_path):
         os.path.dirname(model_path) or ".", "..", "catalog.json"))
 
 
+def merge_entry(base, patch):
+    """Проектная запись ДОПОЛНЯЕТ дефолтную, а не заменяет её: вопросы и имена
+    добавляются, значения и описание перекрываются, если заданы."""
+    out = json.loads(json.dumps(base))
+    seen = {q["id"] for q in out.get("questions", [])}
+    for q in patch.get("questions") or []:
+        if q["id"] not in seen:
+            out.setdefault("questions", []).append(q)
+            seen.add(q["id"])
+    m = out.setdefault("matches", {})
+    for key in ("names", "types"):
+        have = m.get(key) or []
+        for x in (patch.get("matches") or {}).get(key) or []:
+            if x not in have:
+                have.append(x)
+        m[key] = have
+    for key in ("title", "desc", "env_candidate"):
+        if patch.get(key):
+            out[key] = patch[key]
+    for key in ("values", "special"):
+        have = out.get(key) or []
+        for x in patch.get(key) or []:
+            if x not in have:
+                have.append(x)
+        if have:
+            out[key] = have
+    return out
+
+
 def catalogs(project_dir):
-    """Дефолтная корзина плюс проектная. Проектная ищется рядом с моделью
+    """Дефолтная корзина, дополненная проектной. Проектная ищется рядом с моделью
     и на уровень выше (обычный случай — .states/catalog.json)."""
-    out = store.load(DEFAULT_CATALOG) or []
+    base = {e["id"]: e for e in (store.load(DEFAULT_CATALOG) or [])}
+    order = list(base)
     for cand in (os.path.join(project_dir, "..", "catalog.json"),
                  os.path.join(project_dir, "catalog.json")):
-        if os.path.exists(cand):
-            out = (store.load(cand) or []) + out
-    return out
+        for e in (store.load(cand) or []):
+            if e["id"] in base:
+                base[e["id"]] = merge_entry(base[e["id"]], e)
+            else:
+                base[e["id"]] = e
+                order.append(e["id"])
+    return [base[i] for i in order]
 
 
 def find(cat, name, type_):
@@ -93,14 +127,20 @@ def cmd_show(a):
     m = store.load(a.model)
     if not m:
         die(f"нет модели {a.model}", "завести: sm.py init <модель> --system … --source …")
-    print(f"{m.get('system','—')}  ({m.get('mode','code')})  {m.get('source','—')}")
+    print(f"{m.get('system','—')}  {m.get('source','—')}")
     P = m.get("params") or {}
     print(f"\nпараметры ({len(P)}):")
     for n, p in P.items():
         env = "  [окружение]" if p.get("env") else ""
         cat = f"  ←{p['catalog']}" if p.get("catalog") else ""
         print(f"  {n}{env}{cat}")
-        print(f"      значения: {', '.join(map(str, p['values']))}")
+        av = p.get("all_values") or p["values"]
+        if len(av) != len(p["values"]):
+            print(f"      все значения ({len(av)}): {', '.join(map(str, av))}")
+            print(f"      классы ({len(p['values'])}): {', '.join(map(str, p['values']))}")
+            print(f"      объединены: {p.get('grouping', '— без объяснения —')}")
+        else:
+            print(f"      значения: {', '.join(map(str, p['values']))}")
         if p.get("special"):
             print(f"      вне матрицы: {', '.join(map(str, p['special']))}")
         if p.get("desc"):
@@ -217,19 +257,93 @@ def cmd_transition_add(a):
 
 
 def cmd_catalog_list(a):
+    """Только название и описание. Вопросы — через catalog-get по конкретному типу."""
     cat = catalogs(os.path.dirname(a.model or ".") or ".")
     if a.type:
         cat = [c for c in cat if a.type in (c.get("matches") or {}).get("types", [])]
-    print(f"{len(cat)} семантик:")
+    print(f"{len(cat)} типов параметров"
+          + (f" с типом «{a.type}»" if a.type else "") + ":\n")
     for c in cat:
-        names = ", ".join((c.get("matches") or {}).get("names", [])[:5])
-        env = "  [env-кандидат]" if c.get("env_candidate") else ""
-        print(f"  {c['id']:18} {len(c['questions'])} вопр.{env}")
-        print(f"      имена: {names}")
-        print(f"      значения: {', '.join(map(str, c.get('values', [])))}")
+        env = "  [окружение]" if c.get("env_candidate") else ""
+        print(f"  {c['id']:18} {c.get('title', '—')}{env}")
+        print(f"  {'':18} {c.get('desc', '')}")
+        print()
+    print("вопросы конкретного типа: sm.py catalog-get <модель> <id>")
+
+
+def cmd_catalog_get(a):
+    """Полная карточка типа: вопросы, значения, спецзначения, имена."""
+    cat = {c["id"]: c for c in catalogs(os.path.dirname(a.model) or ".")}
+    c = cat.get(a.id)
+    if not c:
+        die(f"типа «{a.id}» в корзине нет",
+            "посмотреть все: sm.py catalog-list; завести: sm.py catalog-new")
+    print(f"{c['id']} — {c.get('title','—')}")
+    print(f"  {c.get('desc','')}\n")
+    print(f"ВОПРОСЫ ({len(c['questions'])}) — задавай ПО ОДНОМУ, с вариантами:")
+    for q in c["questions"]:
+        print(f"  {q['id']}: {q['ask']}")
+        if q.get("options"):
+            print(f"      варианты: {' | '.join(q['options'])}")
+    print(f"\n  значения по умолчанию : {', '.join(map(str, c.get('values', [])))}")
+    print(f"  вне матрицы           : {', '.join(map(str, c.get('special', []))) or '—'}")
+    print(f"  типичные имена        : {', '.join((c.get('matches') or {}).get('names', [])) or '—'}")
+    for sn in (c.get("seen") or [])[-2:]:
+        print(f"  раньше здесь          : {sn.get('where')} → {sn.get('values')}")
+
+
+def cmd_catalog_edit(a):
+    """Дополнить тип: новые вопросы, имена, значения. Правка ложится в проектную
+    корзину и не трогает дефолтную — обновление плагина её не затрёт."""
+    p = project_catalog(a.model)
+    cur = store.load(p) or []
+    base = {c["id"]: c for c in catalogs(os.path.dirname(a.model) or ".")}
+    if a.id not in base:
+        die(f"типа «{a.id}» в корзине нет", "завести новый: sm.py catalog-new")
+    entry = next((e for e in cur if e["id"] == a.id), None)
+    if entry is None:
+        entry = {"id": a.id}
+        cur.append(entry)
+    added = []
+    for q in a.add_questions or []:
+        qid, ask = q.split("=", 1)
+        opts = None
+        if "|" in ask:
+            ask, _, rest = ask.partition("|")
+            ask = ask.strip()
+            opts = [x.strip() for x in rest.split("|") if x.strip()]
+        if not ask.endswith("?"):
+            die(f"вопрос «{qid}» не заканчивается знаком вопроса",
+                "вопрос должен быть вопросом, иначе на него не отвечают")
+        if any(x["id"] == qid for x in base[a.id].get("questions", [])):
+            die(f"вопрос «{qid}» у типа «{a.id}» уже есть")
+        nq = {"id": qid, "ask": ask,
+              "options": (opts or []) + ["в спеке не сказано"]}
+        entry.setdefault("questions", []).append(nq)
+        added.append(qid)
+    for key, val in (("names", a.add_names), ("values", a.add_values),
+                     ("special", a.add_special)):
+        if val:
+            if key == "names":
+                entry.setdefault("matches", {}).setdefault("names", []).extend(val)
+            else:
+                entry.setdefault(key, []).extend(val)
+            added.append(f"{key}: {', '.join(val)}")
+    if a.desc:
+        entry["desc"] = a.desc
+        added.append("описание")
+    if not added:
+        die("нечего добавлять", "укажи --add-questions, --add-names, --add-values,"
+            " --add-special или --desc")
+    store.save(p, cur)
+    print(f"тип «{a.id}» дополнен: {'; '.join(added)}")
+    print(f"правка в {p} — при следующем разборе вопросы зададутся автоматически")
 
 
 def cmd_catalog_new(a):
+    if not a.title or not a.desc:
+        die("нужны --title и --desc",
+            "без названия и описания тип нельзя выбрать из списка")
     p = project_catalog(a.model)
     cur = store.load(p) or []
     if any(c["id"] == a.id for c in cur):
@@ -237,17 +351,24 @@ def cmd_catalog_new(a):
     qs = []
     for q in a.questions or []:
         qid, ask = q.split("=", 1)
+        opts = None
+        if "|" in ask:
+            ask, _, rest = ask.partition("|")
+            ask = ask.strip()
+            opts = [x.strip() for x in rest.split("|") if x.strip()]
         if not ask.endswith("?"):
             die(f"вопрос «{qid}» не заканчивается знаком вопроса",
                 "вопрос должен быть вопросом, иначе на него не отвечают")
-        qs.append({"id": qid, "ask": ask})
+        qs.append({"id": qid, "ask": ask,
+                   "options": (opts or []) + ["в спеке не сказано"]})
     if not qs:
         die("нет --questions", "семантика без вопросов бесполезна")
-    cur.append({"id": a.id, "matches": {"names": a.names or [], "types": [a.type]},
+    cur.append({"id": a.id, "title": a.title, "desc": a.desc,
+                "matches": {"names": a.names or [], "types": [a.type]},
                 "questions": qs, "values": a.values or [], "special": a.special or [],
                 "seen": []})
     store.save(p, cur)
-    print(f"семантика «{a.id}» добавлена в {p}: {len(qs)} вопросов")
+    print(f"тип «{a.id}» ({a.title}) добавлен в {p}: {len(qs)} вопросов")
 
 
 
@@ -283,11 +404,15 @@ def cmd_catalog(a):
         print(f"  вне матрицы           : {', '.join(map(str, hit.get('special', [])))}")
         for sn in (hit.get("seen") or [])[-2:]:
             print(f"  раньше здесь          : {sn.get('where')} → {sn.get('values')}")
-    print(f"\nОБЯЗАТЕЛЬНЫЕ ВОПРОСЫ ({len(qs)}) — без ответа на каждый параметр не добавится:")
-    for q in qs:
-        print(f"  -a {q['id']}=\"…\"   {q['ask']}")
-    if not qs:
-        print("  (у этой семантики вопросов нет)")
+    if qs:
+        print(f"\nВОПРОСОВ: {len(qs)}. Задавай ПО ОДНОМУ, с вариантами ответа."
+              " Что нашёл в спеке — отвечай сам, не спрашивая.")
+        print(f"первый: {qs[0]['ask']}")
+        if qs[0].get("options"):
+            print(f"  варианты: {' | '.join(qs[0]['options'])}")
+        print(f"\nостальные и их варианты: sm.py catalog-get {a.model} {(hit or {}).get('id')}")
+    else:
+        print("  (у этого типа вопросов нет)")
 
     L["lookups"][a.name] = {"catalog": (hit or {}).get("id"),
                             "questions": [q["id"] for q in qs],
@@ -326,12 +451,23 @@ def cmd_param_add(a):
         die("не указан --from", "источник значений обязателен: file:line")
     if not a.values:
         die("не указаны --values", "классы значений выводятся из ответов, но задаются явно")
+    if not a.all_values:
+        die("не указаны --all-values",
+            "сначала перечисли ВСЕ возможные значения параметра из спеки, "
+            "и только потом объединяй их в классы")
+    extra = [v for v in a.all_values if v not in a.values]
+    if extra and not a.grouping:
+        die(f"{len(a.all_values)} значений свёрнуто в {len(a.values)} классов без объяснения",
+            "нужен --grouping: почему эти значения ведут себя одинаково. "
+            f"вне классов оказались: {', '.join(extra[:8])}")
 
     m = load_model(a.model)
     m.setdefault("params", {})
     if a.name in m["params"] and not a.force:
         die(f"параметр «{a.name}» уже есть", "перезаписать: --force")
-    p = {"type": a.type, "values": a.values, "from": a.frm}
+    p = {"type": a.type, "all_values": a.all_values, "values": a.values, "from": a.frm}
+    if a.grouping:
+        p["grouping"] = a.grouping
     if a.desc: p["desc"] = a.desc
     if look.get("catalog"): p["catalog"] = look["catalog"]
     if a.special: p["special"] = a.special
@@ -339,6 +475,9 @@ def cmd_param_add(a):
     p["answers"] = ans
     m["params"][a.name] = p
     save_model(a.model, m)
+    if extra:
+        print(f"  объединено: {len(a.all_values)} значений → {len(a.values)} классов")
+        print(f"  основание: {a.grouping}")
     print(f"параметр «{a.name}» добавлен: {len(a.values)} значений"
           f"{', ' + str(len(a.special)) + ' вне матрицы' if a.special else ''}"
           f"{', окружение' if a.env else ''}")
@@ -469,8 +608,22 @@ def main():
     cl.add_argument("--type"); cl.add_argument("--model", default=".")
     cl.set_defaults(fn=cmd_catalog_list)
 
-    cn = sub.add_parser("catalog-new", help="завести семантику в проектной корзине")
+    cg = sub.add_parser("catalog-get", help="вопросы и значения конкретного типа")
+    cg.add_argument("model"); cg.add_argument("id")
+    cg.set_defaults(fn=cmd_catalog_get)
+
+    ce = sub.add_parser("catalog-edit", help="дополнить тип вопросами и именами")
+    ce.add_argument("model"); ce.add_argument("id")
+    ce.add_argument("--add-questions", nargs="*", dest="add_questions")
+    ce.add_argument("--add-names", nargs="*", dest="add_names")
+    ce.add_argument("--add-values", nargs="*", dest="add_values")
+    ce.add_argument("--add-special", nargs="*", dest="add_special")
+    ce.add_argument("--desc")
+    ce.set_defaults(fn=cmd_catalog_edit)
+
+    cn = sub.add_parser("catalog-new", help="завести новый тип параметра")
     cn.add_argument("model"); cn.add_argument("--id", required=True)
+    cn.add_argument("--title", required=True); cn.add_argument("--desc", required=True)
     cn.add_argument("--names", nargs="*"); cn.add_argument("--type", required=True)
     cn.add_argument("--questions", nargs="+"); cn.add_argument("--values", nargs="*")
     cn.add_argument("--special", nargs="*")
@@ -483,6 +636,9 @@ def main():
     pa.add_argument("--from", dest="frm"); pa.add_argument("--desc")
     pa.add_argument("--special", nargs="*"); pa.add_argument("--env", action="store_true")
     pa.add_argument("-a", "--answer", action="append")
+    pa.add_argument("--all-values", nargs="+", dest="all_values",
+                    help="ВСЕ возможные значения из спеки, до объединения")
+    pa.add_argument("--grouping", help="почему значения объединены в классы")
     pa.add_argument("--catalog", help="id семантики, когда по имени не определилось")
     pa.add_argument("--force", action="store_true")
     pa.set_defaults(fn=cmd_param_add)

@@ -43,3 +43,34 @@ class T(unittest.TestCase):
         e, w = self.check(m(params={"x": {"type": "enum", "catalog": "нет_такой",
                                           "values": ["a"], "from": "a.ts:1", "answers": {}}}))
         self.assertTrue(any("нет_такой" in x for x in e), e)
+
+
+class Grouping(unittest.TestCase):
+    """Все значения перечисляются до объединения, объединение объясняется."""
+
+    def check(self, params):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "m.states.json")
+            store.save(p, {"system": "T", "source": "a.md", "params": params,
+                           "constraints": []})
+            return validate.check(p)
+
+    def test_missing_all_values_is_error(self):
+        e, w = self.check({"x": {"type": "enum", "values": ["a"], "from": "a.md:1"}})
+        self.assertTrue(any("all_values" in z for z in e), e)
+
+    def test_grouping_required_when_collapsed(self):
+        e, w = self.check({"x": {"type": "enum", "all_values": ["a", "b", "c"],
+                                 "values": ["a", "bc"], "from": "a.md:1"}})
+        self.assertTrue(any("без объяснения" in z for z in e), e)
+
+    def test_grouping_present_is_ok(self):
+        e, w = self.check({"x": {"type": "enum", "all_values": ["a", "b", "c"],
+                                 "values": ["a", "bc"], "from": "a.md:1",
+                                 "grouping": "b и c дают один исход по §2"}})
+        self.assertEqual([z for z in e if "объяснения" in z], [])
+
+    def test_no_collapse_needs_no_grouping(self):
+        e, w = self.check({"x": {"type": "enum", "all_values": ["a", "b"],
+                                 "values": ["a", "b"], "from": "a.md:1"}})
+        self.assertEqual(e, [])

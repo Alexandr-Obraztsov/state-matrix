@@ -42,13 +42,15 @@ class T(unittest.TestCase):
     def test_param_without_from_refused(self):
         run("catalog", self.m, "amount", "--type", "number")
         out = run("param", "add", self.m, "--name", "amount", "--type", "number",
-                  "--values", "zero", *answers_for("money_amount"), expect=2)
+                  "--values", "zero", "--all-values", "zero",
+                  *answers_for("money_amount"), expect=2)
         self.assertIn("--from", out)
 
     def test_param_added_with_answers(self):
         run("catalog", self.m, "amount", "--type", "number")
         run("param", "add", self.m, "--name", "amount", "--type", "number",
-            "--values", "zero", "typical", "--from", "a.ts:1", *answers_for("money_amount"))
+            "--values", "zero", "typical", "--all-values", "zero", "typical",
+            "--from", "a.ts:1", *answers_for("money_amount"))
         p = json.load(open(self.m))["params"]["amount"]
         self.assertEqual(len(p["answers"]),
                          len(next(c for c in CAT if c["id"] == "money_amount")["questions"]))
@@ -57,7 +59,8 @@ class T(unittest.TestCase):
     def _amount(self):
         run("catalog", self.m, "amount", "--type", "number")
         run("param", "add", self.m, "--name", "amount", "--type", "number",
-            "--values", "zero", "typical", "--from", "a.ts:1", *answers_for("money_amount"))
+            "--values", "zero", "typical", "--all-values", "zero", "typical",
+            "--from", "a.ts:1", *answers_for("money_amount"))
 
     def test_rule_without_ref_needs_ask(self):
         self._amount()

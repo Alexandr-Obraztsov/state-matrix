@@ -34,7 +34,13 @@ def main():
         L.append(f"**`{n}`** — {p.get('type','—')}{tag}")
         if p.get("desc"):
             L.append(f"  {p['desc']}")
-        L.append(f"  значения: {vals(p.get('values', []))}")
+        av = p.get("all_values") or p.get("values", [])
+        if len(av) != len(p.get("values", [])):
+            L.append(f"  все значения ({len(av)}): {vals(av)}")
+            L.append(f"  классы ({len(p['values'])}): {vals(p['values'])}")
+            L.append(f"  **объединены:** {p.get('grouping', '— без объяснения —')}")
+        else:
+            L.append(f"  значения: {vals(p.get('values', []))}")
         if p.get("special"):
             L.append(f"  вне матрицы: {vals(p['special'])}")
         L.append(f"  источник: {p.get('from','—')}")

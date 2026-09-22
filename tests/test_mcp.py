@@ -49,8 +49,8 @@ class T(unittest.TestCase):
                            call("sm_init", {"model": m, "system": "X",
                                             "source": "spec.md"}, 2),
                            call("sm_param_add", {"model": m, "name": "n", "type": "number",
-                                                 "values": ["a"], "from": "a.ts:1",
-                                                 "answers": []}, 3)])
+                                                 "values": ["a"], "all_values": ["a"],
+                                                 "from": "a.ts:1", "answers": []}, 3)])
             res = out[2]["result"]
             self.assertTrue(res["isError"])
             self.assertIn("корзина", res["content"][0]["text"])
@@ -70,6 +70,7 @@ class T(unittest.TestCase):
                              call("sm_param_add", {"model": m, "name": "amount",
                                                    "type": "number",
                                                    "values": ["zero", "typical"],
+                                                   "all_values": ["zero", "typical"],
                                                    "from": "a.ts:1", "answers": ans}, 4),
                              call("sm_show", {"model": m}, 5)])
             for r in out[1:]:
@@ -108,6 +109,7 @@ class StreamPurity(unittest.TestCase):
                 call("sm_catalog", {"model": m, "name": "amount", "type": "number"}, 3),
                 call("sm_param_add", {"model": m, "name": "amount", "type": "number",
                                       "values": ["zero", "typical"],
+                                      "all_values": ["zero", "typical"],
                                       "from": os.path.join(d, "spec.md") + ":§3",
                                       "answers": [f"{q['id']}=неизвестно" for q in qs]}, 4),
                 call("sm_state_add", {"model": m, "name": "Любое", "when": [],

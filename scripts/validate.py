@@ -8,10 +8,12 @@ def semantics(model_path):
     """Дефолтная корзина плюс проектная; проектная имеет приоритет."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cat = {c["id"]: c for c in store.load(os.path.join(root, "catalog", "default.json"))}
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import sm
     d = os.path.dirname(model_path) or "."
     for cand in (os.path.join(d, "..", "catalog.json"), os.path.join(d, "catalog.json")):
         for c in (store.load(cand) or []):
-            cat[c["id"]] = c
+            cat[c["id"]] = sm.merge_entry(cat[c["id"]], c) if c["id"] in cat else c
     return cat
 
 
@@ -28,6 +30,14 @@ def check(path):
     for n, p in P.items():
         if not p.get("values"): errs.append(f"{n}: нет values")
         if not p.get("from"):   errs.append(f"{n}: нет from — источник значений не указан")
+        av = p.get("all_values")
+        if not av:
+            errs.append(f"{n}: нет all_values — не перечислены все возможные значения")
+        else:
+            extra = [v for v in av if v not in p.get("values", [])]
+            if extra and not p.get("grouping"):
+                errs.append(f"{n}: {len(av)} значений свёрнуто в {len(p['values'])} "
+                            f"классов без объяснения (нет grouping)")
         cid = p.get("catalog")
         if cid:
             if cid not in CAT:
