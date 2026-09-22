@@ -409,6 +409,8 @@ def cmd_state_add(a):
 
 
 def cmd_build(a):
+    """Вывод подпроцессов обязательно перехватывается и печатается через print:
+    под MCP stdout — это поток JSON-RPC, и прямая запись в него ломает сессию."""
     import subprocess
     sc = lambda n: os.path.join(ROOT, "scripts", n)
     name = os.path.splitext(os.path.basename(a.model))[0].replace(".states", "")
@@ -419,12 +421,18 @@ def cmd_build(a):
              ["python3", sc("engine.py"), a.model, "-a",
               os.path.join(os.path.dirname(a.model) or ".", "..", "answers.json"), "-o", out]]
     for cmd in steps:
-        r = subprocess.run(cmd, text=True)
+        r = subprocess.run(cmd, text=True, capture_output=True)
+        text = (r.stdout or "") + (r.stderr or "")
+        if text.strip():
+            print(text.rstrip())
         if r.returncode:
-            die(f"шаг не прошёл: {' '.join(os.path.basename(x) for x in cmd[:2])}",
+            die(f"шаг не прошёл: {os.path.basename(cmd[1])}",
                 "конвейер остановлен, модель не собрана")
+    r = subprocess.run(["python3", sc("report_md.py"), out], text=True, capture_output=True)
+    if r.returncode:
+        die("отчёт не собрался", (r.stderr or "").strip()[:300])
     print()
-    subprocess.run(["python3", sc("report_md.py"), out])
+    print(r.stdout.rstrip())
 
 
 def main():
