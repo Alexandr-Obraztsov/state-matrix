@@ -25,8 +25,8 @@ class T(unittest.TestCase):
 
     def test_skill_mentions_pipeline_order(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"), encoding="utf-8").read()
-        for step in ("extract.py", "sm.py catalog", "param add", "rule add",
-                     "state add", "sm.py build"):
+        for step in ("sm_extract", "sm_catalog", "sm_param_add", "sm_rule_add",
+                     "sm_state_add", "sm_build"):
             self.assertIn(step, s)
 
     def test_skill_states_the_ceiling(self):
@@ -43,6 +43,12 @@ class T(unittest.TestCase):
         for f in ("catalog.md", "findings.md"):
             self.assertTrue(os.path.exists(
                 os.path.join(R, "skills", "state-matrix", "references", f)), f)
+
+    def test_mcp_declared(self):
+        c = json.load(open(os.path.join(R, ".mcp.json"), encoding="utf-8"))
+        self.assertIn("state-matrix", c)
+        self.assertEqual(c["state-matrix"]["command"], "python3")
+        self.assertIn("${CLAUDE_PLUGIN_ROOT}", " ".join(c["state-matrix"]["args"]))
 
     def test_no_report_html_left(self):
         self.assertFalse(os.path.exists(os.path.join(R, "report")))
