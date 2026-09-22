@@ -1,0 +1,9 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "state-matrix-report",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["scripts/serve.py", "--port", "4177"],
+      "port": 4177 }
+  ]
+}

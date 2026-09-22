@@ -1,0 +1,51 @@
+# Базовые семантики. Проектный каталог (.states/catalog.yaml) имеет приоритет.
+- id: money_amount
+  version: 1
+  matches:
+    names: [amount, price, sum, total, cost, fee, balance]
+    types: [number, string]
+  questions:
+    - { id: unit,     ask: "какая валюта и в каких единицах — копейки или рубли?" }
+    - { id: zero,     ask: "нулевая сумма осмысленна?" }
+    - { id: negative, ask: "отрицательная возможна (возврат, корректировка)?" }
+    - { id: max,      ask: "есть ли верхний лимит суммы?" }
+  values:  [zero, min_unit, typical, over_max]
+  special: [negative, fractional_unit, over_int32]
+  seen: []
+
+- id: pagination_limit
+  version: 1
+  matches: { names: [limit, perPage, pageSize, count], types: [number] }
+  questions:
+    - { id: bounds,  ask: "min/max и значение по умолчанию?" }
+    - { id: over,    ask: "что при превышении максимума — обрезать, ошибка или дефолт?" }
+  values:  [min, default, max, over_max]
+  special: [zero, negative, fractional]
+  seen: []
+
+- id: free_text
+  version: 1
+  matches: { names: [text, comment, description, title, note], types: [string] }
+  questions:
+    - { id: required, ask: "поле обязательно? пустая строка допустима?" }
+    - { id: maxlen,   ask: "максимальная длина?" }
+    - { id: trim,     ask: "пробелы по краям обрезаются на входе?" }
+    - { id: render,   ask: "содержимое интерпретируется (markdown, html)?" }
+  values:  [empty, blank, typical, max_len, over_max_len]
+  special: [emoji, rtl, newlines, long_word_no_spaces, markdown_injection]
+  seen: []
+
+- id: http_endpoint
+  version: 1
+  matches: { types: [endpoint] }
+  questions:
+    - { id: codes,   ask: "какие коды ответа документированы?" }
+    - { id: empty,   ask: "возможен ли пустой успешный ответ?" }
+    - { id: partial, ask: "приходят ли частичные данные (nullable-поля)?" }
+    - { id: timeout, ask: "есть ли таймаут и какой?" }
+    - { id: auth,    ask: "что делать при потере авторизации посреди работы?" }
+    - { id: late,    ask: "может ли ответ прийти после ухода со страницы?" }
+  values:  [pending, ok, ok_empty, error]
+  special: [ok_partial, status_401, status_403, status_404, status_409, status_500,
+            timeout, network_error, malformed, slow_after_unmount]
+  seen: []

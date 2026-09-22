@@ -1,0 +1,186 @@
+system: checkout-widget
+source: src/mfe/checkout/Checkout.tsx
+mode: code
+
+params:
+  cart:
+    type: endpoint
+    endpoint: "GET /api/cart"
+    values: [pending, ok, ok_empty, error]
+    from: "Checkout.tsx:44 useCart()"
+    special: [ok_partial, status_401, status_500, timeout, malformed, slow_after_unmount]
+  viewport:
+    type: enum
+    env: true
+    values: [mobile, tablet, desktop]
+    from: "useBreakpoint.ts:12 matchMedia"
+  hostVersion:
+    type: contract
+    env: true
+    values: [v1, v2]
+    from: "bootstrap.ts:8 window.__HOST__.version"
+  auth:
+    type: enum
+    values: [guest, user]
+    from: "bootstrap.ts:14 host.token"
+  payMethod:
+    type: enum
+    values: [card, sbp, cash]
+    from: "Checkout.tsx:61 methods[]"
+    special: [unknown_value]
+  promo:
+    type: enum
+    values: [absent, valid, expired]
+    from: "PromoField.tsx:23"
+  amount:
+    type: number
+    catalog: money_amount
+    values: [zero, min_unit, typical, over_max]
+    from: "cart.total, копейки"
+    special: [negative, fractional_unit, over_int32]
+  network:
+    type: enum
+    values: [online, offline]
+    from: "navigator.onLine"
+
+constraints:
+  - id: c1
+    when: { cart: [pending, error] }
+    irrelevant: [payMethod, promo, amount]
+    evidence: "Checkout.tsx:88 — до загрузки корзины форма не рендерится"
+    status: proven
+
+  - id: c2
+    when: { cart: ok_empty }
+    irrelevant: [payMethod, promo, amount]
+    evidence: "Checkout.tsx:94 — пустая корзина рендерит заглушку вместо формы"
+    status: proven
+
+  - id: c3
+    when: { amount: zero }
+    irrelevant: [payMethod, promo]
+    evidence: "Checkout.tsx:120 — бесплатный заказ проходит без выбора оплаты"
+    status: proven
+
+  - id: c4
+    forbid: { hostVersion: v1, payMethod: sbp }
+    evidence: "contract.md — СБП появился в контракте хоста v2"
+    status: proven
+
+  - id: c5
+    forbid: { auth: guest, promo: [valid, expired] }
+    evidence: "PromoField.tsx:19 — поле промокода скрыто для гостя"
+    status: proven
+
+  - id: c6
+    when: { network: offline }
+    irrelevant: [payMethod, promo, amount]
+    ask: "в офлайне форма скрывается целиком или остаётся с заблокированной кнопкой?"
+    evidence: "предположение: офлайн блокирует форму, значения полей перестают влиять"
+    status: assumed
+
+initial:
+  - { cart: pending, auth: guest, payMethod: card, promo: absent, amount: typical, network: online }
+
+transitions:
+  - event: cartResolved
+    when: { cart: pending, network: online }
+    set: { cart: ok }
+    evidence: "useCart.ts:31 onSuccess"
+  - event: cartEmpty
+    when: { cart: pending, network: online }
+    set: { cart: ok_empty, amount: zero }
+    evidence: "useCart.ts:33 — пустая корзина, сумма ноль"
+  - event: cartFailed
+    when: { cart: pending }
+    set: { cart: error }
+    evidence: "useCart.ts:38 onError"
+  - event: retry
+    when: { cart: error, network: online }
+    set: { cart: pending }
+    evidence: "ErrorState.tsx:12 кнопка «Повторить»"
+  - event: login
+    when: { auth: guest }
+    set: { auth: user }
+    evidence: "host.onAuth"
+  - event: logout
+    when: { auth: user }
+    set: { auth: guest, promo: absent }
+    evidence: "host.onAuth — промокод сбрасывается"
+  - event: applyPromo
+    when: { auth: user, cart: ok }
+    set: { promo: valid }
+    evidence: "PromoField.tsx:41"
+  - event: promoExpired
+    when: { promo: valid }
+    set: { promo: expired }
+    evidence: "PromoField.tsx:52 — таймер акции"
+  - event: pickSbp
+    when: { cart: ok, hostVersion: v2 }
+    set: { payMethod: sbp }
+    evidence: "Checkout.tsx:64"
+  - event: pickCash
+    when: { cart: ok }
+    set: { payMethod: cash }
+    evidence: "Checkout.tsx:66"
+  - event: pickCard
+    when: { cart: ok }
+    set: { payMethod: card }
+    evidence: "Checkout.tsx:62"
+  - event: amountChanged
+    when: { cart: ok }
+    set: { amount: over_max }
+    evidence: "cart.total пересчитывается при изменении количества"
+  - event: amountSmall
+    when: { cart: ok }
+    set: { amount: min_unit }
+    evidence: "cart.total"
+  - event: amountNormal
+    when: { cart: ok }
+    set: { amount: typical }
+    evidence: "cart.total"
+  - event: refreshCart
+    when: { cart: ok, network: online }
+    set: { cart: pending }
+    evidence: "useCart.ts:46 — обновление после изменения количества"
+  - event: removeLastItem
+    when: { cart: ok }
+    set: { cart: ok_empty, amount: zero, promo: absent }
+    evidence: "CartList.tsx:70 — удалён последний товар"
+  - event: goOffline
+    set: { network: offline }
+    evidence: "window.offline"
+  - event: goOnline
+    when: { network: offline }
+    set: { network: online }
+    evidence: "window.online"
+
+outcomes:
+  - match: { cart: pending }
+    behavior: "скелетон формы, кнопка оплаты скрыта"
+    evidence: "Checkout.tsx:88"
+    status: described
+  - match: { cart: error }
+    behavior: "заглушка ошибки с кнопкой «Повторить»"
+    evidence: "ErrorState.tsx:8"
+    status: described
+  - match: { cart: ok_empty }
+    behavior: "«Корзина пуста», ссылка в каталог"
+    evidence: "Checkout.tsx:94"
+    status: described
+  - match: { cart: ok, amount: zero }
+    behavior: "«Оформить бесплатно», блок оплаты скрыт"
+    evidence: "Checkout.tsx:120"
+    status: described
+  - match: { cart: ok, amount: over_max, payMethod: sbp }
+    behavior: "СБП недоступен выше лимита — сообщение и переключение на карту"
+    evidence: "Checkout.tsx:133"
+    status: described
+  - match: { cart: ok, promo: expired }
+    behavior: "промокод перечёркнут, сумма пересчитана обратно"
+    evidence: "PromoField.tsx:57"
+    status: described
+  - match: { cart: ok, payMethod: card, promo: absent, amount: typical }
+    behavior: "обычная форма оплаты картой"
+    evidence: "Checkout.tsx:100"
+    status: described

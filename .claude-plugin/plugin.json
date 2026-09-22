@@ -1,0 +1,8 @@
+{
+  "name": "state-matrix",
+  "description": "Поднимает все состояния системы: параметры, зависимости, достижимость. Находит комбинации, о которых код или спека молчат.",
+  "version": "0.1.0",
+  "author": { "name": "obraztsov" },
+  "license": "MIT",
+  "keywords": ["testing", "state-machine", "combinatorial", "coverage", "spec-review"]
+}
