@@ -44,7 +44,7 @@
 Репозиторий с `.claude-plugin/marketplace.json` в корне:
 
 ```bash
-/plugin marketplace add https://github.com/<user>/state-matrix
+/plugin marketplace add https://github.com/Alexandr-Obraztsov/state-matrix
 /plugin install state-matrix
 ```
 

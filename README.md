@@ -9,7 +9,7 @@
 ## Установка
 
 ```bash
-/plugin marketplace add https://github.com/<user>/state-matrix
+/plugin marketplace add https://github.com/Alexandr-Obraztsov/state-matrix
 /plugin install state-matrix
 ```
 
