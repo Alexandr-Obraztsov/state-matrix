@@ -64,52 +64,20 @@ def ref_hint(why):
 
 # ---------- база знаний ----------
 
-BASE_KB = os.path.join(ROOT, "knowledge", "base.json")
+import kb
 
 
-def project_kb(model):
-    return os.path.normpath(os.path.join(os.path.dirname(model) or ".", "..",
-                                         "knowledge.json"))
-
-
-def knowledge(model):
-    """Базовая база знаний плюс проектная. Проектная дополняет, а не заменяет."""
-    return merge_knowledge(store.load(BASE_KB) or [], store.load(project_kb(model)) or [])
-
-
-def merge_knowledge(base_list, project_list):
-    base = {k["kind"]: json_copy(k) for k in base_list}
-    for k in project_list:
-        if k["kind"] in base:
-            have = {c["case"] for c in base[k["kind"]]["cases"]}
-            for c in k.get("cases") or []:
-                if c["case"] not in have:
-                    c = dict(c, own=True)
-                    base[k["kind"]]["cases"].append(c)
-            for a in k.get("aka") or []:
-                if a not in base[k["kind"]].setdefault("aka", []):
-                    base[k["kind"]]["aka"].append(a)
-        else:
-            k = json_copy(k)
-            for c in k.get("cases") or []:
-                c["own"] = True
-            k["own"] = True
-            base[k["kind"]] = k
-    return base
-
-
-def json_copy(x):
-    import json as _j
-    return _j.loads(_j.dumps(x))
+def project_root(model):
+    """Корень проекта: модель лежит в <корень>/.states/models/."""
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(model))))
 
 
 def cmd_cases(a):
-    """Корнер-кейсы для вида параметра. Обращаться необязательно, но полезно:
-    здесь то, что чаще всего забывают при перечислении значений."""
-    kb = knowledge(a.model)
+    """Корнер-кейсы для вида параметра. Обращаться необязательно, но полезно."""
+    kinds = kb.merged(project_root(a.model))
     if not a.kind:
         print("виды параметров в базе знаний:\n")
-        for k in kb.values():
+        for k in kinds:
             own = "  [своё]" if k.get("own") else ""
             aka = ", ".join(k.get("aka") or [])
             print(f"  {k['kind']:14} {len(k['cases'])} кейсов{own}"
@@ -117,42 +85,32 @@ def cmd_cases(a):
         print("\nкейсы вида: sm.py cases <модель> --kind строка")
         return
     q = a.kind.lower()
-    hit = next((k for k in kb.values()
+    hit = next((k for k in kinds
                 if k["kind"] == q or q in [x.lower() for x in (k.get("aka") or [])]), None)
     if not hit:
         die(f"вида «{a.kind}» в базе нет",
             "список: sm.py cases <модель>; завести: sm.py learn <модель> --kind … --case …")
     print(f"{hit['kind']} — {len(hit['cases'])} корнер-кейсов")
     if hit.get("desc"):
-        print(f"{hit['desc']}")
+        print(hit["desc"])
     print()
     for c in hit["cases"]:
         own = "  [своё]" if c.get("own") else ""
         print(f"  {c['case']}{own}")
         print(f"      {c.get('why','')}")
-    print("\nэто подсказки, а не обязательный список: бери то, что описано в спеке,"
-          "\nа про недостающее спроси пользователя")
 
 
 def cmd_learn(a):
-    """Дописать корнер-кейс в проектную базу знаний."""
-    p = project_kb(a.model)
-    cur = store.load(p) or []
-    entry = next((k for k in cur if k["kind"] == a.kind), None)
-    if entry is None:
-        entry = {"kind": a.kind, "aka": [], "cases": []}
-        cur.append(entry)
-    if any(c["case"] == a.case for c in entry["cases"]):
-        die(f"кейс «{a.case}» у вида «{a.kind}» уже есть")
-    base = {k["kind"]: k for k in (store.load(BASE_KB) or [])}
-    if a.kind in base and any(c["case"] == a.case for c in base[a.kind]["cases"]):
-        die(f"кейс «{a.case}» уже есть в базовой базе знаний")
-    entry["cases"].append({"case": a.case, "why": a.why or ""})
-    if a.aka:
-        entry["aka"] = sorted(set(entry.get("aka", []) + list(a.aka)))
-    store.save(p, cur)
+    """Дописать корнер-кейс в базу знаний проекта."""
+    root = project_root(a.model)
+    try:
+        if a.aka:
+            kb.upsert_kind(root, a.kind, aka=a.aka)
+        kb.add_case(root, a.kind, a.case, a.why or "")
+    except kb.KBError as e:
+        die(str(e))
     print(f"«{a.kind}» ← «{a.case}»")
-    print(f"  записано в {p}; будет подсказываться в этом проекте впредь")
+    print(f"  записано в {kb.project_file(root)}; будет подсказываться в этом проекте впредь")
 
 
 # ---------- модель ----------
