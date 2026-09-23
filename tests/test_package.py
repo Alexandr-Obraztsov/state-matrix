@@ -82,6 +82,15 @@ class T(unittest.TestCase):
         self.assertNotIn("RULE_OVERLAP", s)
         self.assertIn("Не грузи внутренностями", s)
 
+    def test_skill_traces_endpoints_to_sources(self):
+        """Параметры ручек разматываются до источника — главный способ не упустить вход."""
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertIn("Где искать", s)
+        self.assertIn("откуда берётся", s)
+        for src in ("навигация", "сессия", "окружение", "время", "параметры ручек"):
+            self.assertIn(src, s)
+
     def test_knowledge_base_shipped(self):
         self.assertTrue(os.path.exists(os.path.join(R, "knowledge", "base.json")))
 
