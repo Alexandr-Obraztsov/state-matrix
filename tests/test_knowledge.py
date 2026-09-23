@@ -67,10 +67,10 @@ class Project(unittest.TestCase):
         self.assertIn("в базе нет", out)
 
     def test_learn_adds_to_project(self):
-        self.sm("learn", self.m, "--kind", "строка", "--case", "вставка из Word",
+        self.sm("learn", self.m, "--kind", "строка", "--case", "голосовой ввод",
                 "--why", "невидимая разметка")
         out = self.sm("cases", self.m, "--kind", "строка")
-        self.assertIn("вставка из Word", out)
+        self.assertIn("голосовой ввод", out)
         self.assertIn("[своё]", out)
 
     def test_learn_creates_new_kind(self):
@@ -93,3 +93,52 @@ class Project(unittest.TestCase):
     def test_project_file_location(self):
         self.sm("learn", self.m, "--kind", "строка", "--case", "новое")
         self.assertTrue(os.path.exists(os.path.join(self.d, ".states", "knowledge.json")))
+
+
+class Focus(unittest.TestCase):
+    """Пять главных видов проработаны так, чтобы по ним шла и небольшая модель."""
+    FOCUS = ("число", "деньги", "строка", "дата", "запрос")
+
+    def setUp(self):
+        with open(BASE, encoding="utf-8") as f:
+            self.kb = {k["kind"]: k for k in json.load(f)}
+
+    def test_focus_kinds_come_first(self):
+        with open(BASE, encoding="utf-8") as f:
+            order = [k["kind"] for k in json.load(f)][:5]
+        self.assertEqual(tuple(order), self.FOCUS)
+
+    def test_each_has_the_full_guide(self):
+        for name in self.FOCUS:
+            k = self.kb[name]
+            self.assertTrue(k.get("desc"), name)
+            self.assertGreaterEqual(len(k.get("signals") or []), 8, f"{name}: мало сигналов")
+            self.assertGreaterEqual(len(k.get("where") or []), 4, f"{name}: мало мест поиска")
+            self.assertGreaterEqual(len(k.get("derive") or []), 5, f"{name}: мало шагов")
+            self.assertGreaterEqual(len(k["cases"]), 15, f"{name}: мало кейсов")
+
+    def test_cases_are_grouped(self):
+        for name in self.FOCUS:
+            groups = {c.get("group") for c in self.kb[name]["cases"]}
+            self.assertNotIn(None, groups, f"{name}: кейс без группы")
+            self.assertGreaterEqual(len(groups), 5, f"{name}: мало групп")
+
+    def test_sources_cited(self):
+        for name in self.FOCUS:
+            self.assertTrue(self.kb[name].get("sources"), f"{name}: не указаны источники")
+
+    def test_guide_rendered_in_order(self):
+        d = tempfile.mkdtemp()
+        os.makedirs(os.path.join(d, ".states", "models"))
+        m = os.path.join(d, ".states", "models", "X.states.json")
+        with open(os.path.join(d, "spec.md"), "w", encoding="utf-8") as f:
+            f.write("# Спека\n")
+        subprocess.run([sys.executable, SM, "--root", d, "init", m, "--system", "X",
+                        "--source", "spec.md"], capture_output=True)
+        out = subprocess.run([sys.executable, SM, "--root", d, "cases", m, "--kind", "ручка"],
+                             capture_output=True, text=True).stdout
+        parts = ["КАК УЗНАТЬ В СПЕКЕ", "ГДЕ ИСКАТЬ ЗНАЧЕНИЯ", "КАК ПОЛУЧИТЬ ЗНАЧЕНИЯ",
+                 "КОРНЕР-КЕЙСЫ"]
+        idx = [out.index(p) for p in parts]
+        self.assertEqual(idx, sorted(idx), "разделы должны идти в порядке работы")
+        self.assertIn("[ошибки]", out)

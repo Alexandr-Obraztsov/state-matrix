@@ -90,14 +90,29 @@ def cmd_cases(a):
     if not hit:
         die(f"вида «{a.kind}» в базе нет",
             "список: sm.py cases <модель>; завести: sm.py learn <модель> --kind … --case …")
-    print(f"{hit['kind']} — {len(hit['cases'])} корнер-кейсов")
+    print(f"{hit['kind'].upper()} — {len(hit['cases'])} корнер-кейсов")
     if hit.get("desc"):
         print(hit["desc"])
-    print()
+    if hit.get("signals"):
+        print("\nКАК УЗНАТЬ В СПЕКЕ — слова-сигналы:")
+        print("  " + ", ".join(hit["signals"]))
+    if hit.get("where"):
+        print("\nГДЕ ИСКАТЬ ЗНАЧЕНИЯ:")
+        for w in hit["where"]:
+            print(f"  - {w}")
+    if hit.get("derive"):
+        print("\nКАК ПОЛУЧИТЬ ЗНАЧЕНИЯ — по шагам:")
+        for i, d in enumerate(hit["derive"], 1):
+            print(f"  {i}. {d}")
+    print("\nКОРНЕР-КЕЙСЫ — проверь каждый по спеке:")
+    group = None
     for c in hit["cases"]:
-        own = "  [своё]" if c.get("own") else ""
-        print(f"  {c['case']}{own}")
-        print(f"      {c.get('why','')}")
+        g = c.get("group") or ("своё" if c.get("own") else "прочее")
+        if g != group:
+            print(f"\n  [{g}]")
+            group = g
+        own = "  (добавлено в проекте)" if c.get("own") and c.get("group") else ""
+        print(f"  - {c['case']}{own} — {c.get('why','')}")
 
 
 def cmd_learn(a):
