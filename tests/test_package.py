@@ -91,6 +91,14 @@ class T(unittest.TestCase):
         for src in ("навигация", "сессия", "окружение", "время", "параметры ручек"):
             self.assertIn(src, s)
 
+    def test_skill_requires_knowledge_before_each_param(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"), encoding="utf-8").read()
+        self.assertIn("Перед каждым параметром — база знаний", s)
+        self.assertIn("обязательный шаг", s)
+        m = open(os.path.join(R, "scripts", "mcp_server.py"), encoding="utf-8").read()
+        i = m.index('tool("sm_param_add"')
+        self.assertIn("sm_cases", m[i:i + 600])
+
     def test_knowledge_base_shipped(self):
         self.assertTrue(os.path.exists(os.path.join(R, "knowledge", "base.json")))
 
@@ -99,7 +107,7 @@ class T(unittest.TestCase):
                  encoding="utf-8").read()
         self.assertIn("sm_cases", s)
         self.assertIn("sm_learn", s)
-        self.assertIn("необязательно", s)
+        self.assertIn("sm_cases", s)
 
     def test_mcp_declared(self):
         c = json.load(open(os.path.join(R, ".mcp.json"), encoding="utf-8"))

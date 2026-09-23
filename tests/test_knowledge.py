@@ -98,6 +98,17 @@ class Project(unittest.TestCase):
 class Focus(unittest.TestCase):
     """Пять главных видов проработаны так, чтобы по ним шла и небольшая модель."""
     FOCUS = ("число", "деньги", "строка", "дата", "запрос")
+    ALL = FOCUS + ("формат", "перечисление", "идентификатор", "список", "флаг",
+                   "ошибка", "права", "файл", "окружение")
+
+    def test_every_kind_has_the_full_guide(self):
+        for name in self.ALL:
+            k = self.kb[name]
+            for field in ("desc", "signals", "where", "derive", "sources"):
+                self.assertTrue(k.get(field), f"{name}: нет {field}")
+            self.assertGreaterEqual(len(k["derive"]), 4, f"{name}: мало шагов")
+            self.assertGreaterEqual(len(k["cases"]), 7, f"{name}: мало кейсов")
+            self.assertNotIn(None, {c.get("group") for c in k["cases"]}, f"{name}: кейс без группы")
 
     def setUp(self):
         with open(BASE, encoding="utf-8") as f:
