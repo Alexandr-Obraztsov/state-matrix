@@ -18,8 +18,9 @@ class T(unittest.TestCase):
     def test_example_builds_and_prints_matrix(self):
         r = run(os.path.join(SC, "sm.py"), "--root", R, "build", MODEL)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        for sec in ("СОСТОЯНИЯ", "МАТРИЦА", "ВНЕ МАТРИЦЫ"):
-            self.assertIn(sec, r.stdout)
+        self.assertIn("| состояние |", r.stdout)
+        self.assertIn("Отдельно проверить", r.stdout)
+        self.assertIn("--- служебное", r.stdout)
 
     def test_example_under_ceiling_and_fully_covered(self):
         sys.path.insert(0, SC)

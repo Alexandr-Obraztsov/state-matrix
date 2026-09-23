@@ -119,12 +119,22 @@ class T(unittest.TestCase):
         out = self.sm("build", self.m, expect=2)
         self.assertIn("нет ни одного состояния", out)
 
+    def test_build_splits_user_and_internal_output(self):
+        """Верх вывода можно отдать пользователю, низ — служебный."""
+        self.add("cart", "pending", "ok")
+        self.state("Загрузка")
+        out = self.sm("build", self.m)
+        head, _, tail = out.partition("--- служебное")
+        self.assertIn("| состояние |", head, "таблица должна быть в пользовательской части")
+        self.assertNotIn("r000", head, "номера строк наружу не идут")
+        self.assertIn("r000", tail)
+
     def test_build_lists_unassigned_rows(self):
         self.add("cart", "pending", "ok")
         self.state("Загрузка")
         out = self.sm("build", self.m)
-        self.assertIn("БЕЗ СОСТОЯНИЯ: r000, r001", out)
-        self.assertIn("НЕ НАЗНАЧЕНО", out)
+        self.assertIn("строки без состояния: r000, r001", out)
+        self.assertIn("**?**", out)
 
     def test_assign_fills_rows(self):
         self.add("cart", "pending", "ok")
@@ -133,7 +143,7 @@ class T(unittest.TestCase):
         self.sm("assign", self.m, "--state", "Загрузка", "--rows", "r000")
         out = self.sm("build", self.m)
         self.assertIn("Загрузка", out)
-        self.assertEqual(out.count("НЕ НАЗНАЧЕНО"), 1, "должна остаться одна строка")
+        self.assertEqual(out.count("**?**"), 1, "должна остаться одна строка")
 
     def test_assign_unknown_state_refused(self):
         self.add()

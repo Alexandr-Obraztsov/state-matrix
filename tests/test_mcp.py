@@ -77,7 +77,7 @@ class T(unittest.TestCase):
             for r in out[1:]:
                 self.assertFalse(r["result"].get("isError"),
                                  r["result"]["content"][0]["text"])
-            self.assertIn("МАТРИЦА", out[-1]["result"]["content"][0]["text"])
+            self.assertIn("| состояние |", out[-1]["result"]["content"][0]["text"])
 
 
     def test_unknown_tool_is_error(self):
@@ -117,4 +117,4 @@ class StreamPurity(unittest.TestCase):
             self.assertEqual(len(out), 5, "лишние или потерянные ответы")
             last = out[-1]["result"]
             self.assertFalse(last.get("isError"), last["content"][0]["text"])
-            self.assertIn("МАТРИЦА", last["content"][0]["text"])
+            self.assertIn("| состояние |", last["content"][0]["text"])

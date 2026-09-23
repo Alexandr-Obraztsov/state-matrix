@@ -242,46 +242,42 @@ def cmd_rule_rm(a):
 
 
 def table(cols, rows):
-    w = {c: max([len(c)] + [len(str(r["values"][c])) for r in rows]) for c in cols}
-    ws = max([len("состояние")] + [len(r["state"] or "— НЕ НАЗНАЧЕНО —") for r in rows])
-    out = ["  " + "№".ljust(5) + "  ".join(c.ljust(w[c]) for c in cols)
-           + "  | " + "состояние".ljust(ws) + " | что видно",
-           "  " + "-" * 5 + "  ".join("-" * w[c] for c in cols)
-           + "--+-" + "-" * ws + "-+-" + "-" * 28]
+    """Markdown-таблица: её можно отдать пользователю как есть, не переписывая."""
+    out = ["| " + " | ".join(cols) + " | состояние |",
+           "|" + "---|" * (len(cols) + 1)]
     for r in rows:
-        out.append("  " + r["id"].ljust(5)
-                   + "  ".join(str(r["values"][c]).ljust(w[c]) for c in cols)
-                   + "  | " + (r["state"] or "— НЕ НАЗНАЧЕНО —").ljust(ws)
-                   + " | " + (r.get("desc") or ""))
+        cell = lambda v: "∗" if v == "*" else str(v)
+        out.append("| " + " | ".join(cell(r["values"][c]) for c in cols)
+                   + " | " + (r["state"] or "**?**") + " |")
     return "\n".join(out)
 
 
 def show_result(res):
+    """Вывод делится надвое: верх можно отдать пользователю как есть,
+    низ — служебный, для назначения состояний."""
     c = res["counts"]
-    print(f"\n{res['system']}   {res['source']}")
-    print(f"\n{c['total']} комбинаций → {c['valid']} возможных → {c['collapsed']} строк"
-          f" + {c['specials']} спецзначений")
-    print("\nСОСТОЯНИЯ")
+    print(f"**{c['total']} комбинаций свелись к {c['collapsed']} строкам.**\n")
+    print(table(res["param_order"], res["rows"]))
+    if res["specials"]:
+        print("\nОтдельно проверить: "
+              + ", ".join(f"`{x['param']} = {x['value']}`" for x in res["specials"]) + ".")
+    if c["no_state"]:
+        print(f"\n**Без состояния: {c['no_state']} "
+              f"{'строка' if c['no_state'] == 1 else 'строк'}** — отмечены «?».")
+    block = [f for f in res["findings"] if f["severity"] == "block"]
+    for f in block:
+        print("\n" + f["message"])
+
+    print("\n--- служебное, пользователю не показывать ---")
+    print(f"{res['system']}  ·  {res['source']}")
+    print(f"воронка: {c['total']} → {c['valid']} → {c['collapsed']} (+{c['specials']} спец)")
     for st in res["states"]:
         print(f"  {st['rows']:3}  {st['name']}")
     if c["no_state"]:
-        print(f"  {c['no_state']:3}  ← БЕЗ СОСТОЯНИЯ: назначь, sm.py assign … --rows r000 r001")
-    print("\nМАТРИЦА")
-    print(table(res["param_order"], res["rows"]))
-    if c["no_state"]:
         ids = [r["id"] for r in res["rows"] if not r["state"]]
-        print(f"\nБЕЗ СОСТОЯНИЯ: {', '.join(ids)}")
-        print("  по каждой: назначить состояние, запретить комбинацию правилом"
-              " или признать дырой в спеке")
-    if res["specials"]:
-        print("\nВНЕ МАТРИЦЫ, проверяются по одному:")
-        for x in res["specials"]:
-            print(f"  {x['param']} = {x['value']}")
-    block = [f for f in res["findings"] if f["severity"] == "block"]
-    if block:
-        print()
-        for f in block:
-            print(f["message"])
+        print(f"строки без состояния: {', '.join(ids)}")
+        print("  назначить: sm_assign(state=…, rows=[…])")
+        print("  либо запретить правилом, либо признать дырой в спеке")
 
 
 def cmd_build(a):

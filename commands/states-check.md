@@ -1,13 +1,13 @@
 ---
-description: Проверить все модели состояний в проекте и сам плагин
+description: Проверить модели состояний в проекте
 ---
 
-Проверь состояние матриц в этом проекте:
+Проверь модели состояний в этом проекте.
 
-1. Прогони тесты плагина: `python3 ${CLAUDE_PLUGIN_ROOT}/tests` через `python3 -m unittest discover`.
-2. Для каждой модели в `.states/models/*.states.json` выполни
-   `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/verify.py <модель> --root .` и
-   `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate.py <модель>`.
-3. Сообщи одной таблицей: модель, число параметров, число строк, ошибки.
+1. Найди файлы `.states/models/*.states.json`.
+2. По каждому: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/validate.py <модель> --root .`
+3. По каждому валидному: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/sm.py --root . build <модель>`
+
+Покажи одной таблицей: система, параметров, строк матрицы, без состояния, ошибки.
 
 Ничего не чини без спроса — только покажи, что сломано.
