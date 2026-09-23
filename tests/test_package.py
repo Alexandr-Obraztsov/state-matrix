@@ -49,7 +49,15 @@ class T(unittest.TestCase):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
                  encoding="utf-8").read()
         self.assertIn("с вариантами ответа", s)
-        self.assertGreaterEqual(s.count("• "), 6, "нужны примеры вариантов ответа")
+        self.assertGreaterEqual(s.count("Вопрос вариантами"), 3,
+                                "нужны примеры вопросов с вариантами")
+
+    def test_skill_forbids_code_fences_for_content(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertIn("Без кодовых блоков", s)
+        body = s.split("## Как разговаривать")[1]
+        self.assertNotIn("```", body, "примеры не должны быть в кодовых блоках")
 
     def test_skill_reviews_one_by_one(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
