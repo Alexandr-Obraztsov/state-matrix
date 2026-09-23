@@ -82,10 +82,15 @@ class T(unittest.TestCase):
         self.assertNotIn("RULE_OVERLAP", s)
         self.assertIn("Не грузи внутренностями", s)
 
-    def test_references_exist(self):
-        for f in ("parameter-types.md",):
-            self.assertTrue(os.path.exists(
-                os.path.join(R, "skills", "state-matrix", "references", f)), f)
+    def test_knowledge_base_shipped(self):
+        self.assertTrue(os.path.exists(os.path.join(R, "knowledge", "base.json")))
+
+    def test_skill_points_at_knowledge_base(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertIn("sm_cases", s)
+        self.assertIn("sm_learn", s)
+        self.assertIn("необязательно", s)
 
     def test_mcp_declared(self):
         c = json.load(open(os.path.join(R, ".mcp.json"), encoding="utf-8"))

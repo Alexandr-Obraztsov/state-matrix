@@ -55,6 +55,92 @@ def ref_ok(text, model_path, root):
     return validate.check_ref(text, store.load(model_path).get("source", ""), root)
 
 
+# ---------- база знаний ----------
+
+BASE_KB = os.path.join(ROOT, "knowledge", "base.json")
+
+
+def project_kb(model):
+    return os.path.normpath(os.path.join(os.path.dirname(model) or ".", "..",
+                                         "knowledge.json"))
+
+
+def knowledge(model):
+    """Базовая база знаний плюс проектная. Проектная дополняет, а не заменяет."""
+    base = {k["kind"]: json_copy(k) for k in (store.load(BASE_KB) or [])}
+    for k in (store.load(project_kb(model)) or []):
+        if k["kind"] in base:
+            have = {c["case"] for c in base[k["kind"]]["cases"]}
+            for c in k.get("cases") or []:
+                if c["case"] not in have:
+                    c = dict(c, own=True)
+                    base[k["kind"]]["cases"].append(c)
+            for a in k.get("aka") or []:
+                if a not in base[k["kind"]].setdefault("aka", []):
+                    base[k["kind"]]["aka"].append(a)
+        else:
+            k = json_copy(k)
+            for c in k.get("cases") or []:
+                c["own"] = True
+            k["own"] = True
+            base[k["kind"]] = k
+    return base
+
+
+def json_copy(x):
+    import json as _j
+    return _j.loads(_j.dumps(x))
+
+
+def cmd_cases(a):
+    """Корнер-кейсы для вида параметра. Обращаться необязательно, но полезно:
+    здесь то, что чаще всего забывают при перечислении значений."""
+    kb = knowledge(a.model)
+    if not a.kind:
+        print("виды параметров в базе знаний:\n")
+        for k in kb.values():
+            own = "  [своё]" if k.get("own") else ""
+            aka = ", ".join(k.get("aka") or [])
+            print(f"  {k['kind']:14} {len(k['cases'])} кейсов{own}"
+                  + (f"   ({aka})" if aka else ""))
+        print("\nкейсы вида: sm.py cases <модель> --kind строка")
+        return
+    q = a.kind.lower()
+    hit = next((k for k in kb.values()
+                if k["kind"] == q or q in [x.lower() for x in (k.get("aka") or [])]), None)
+    if not hit:
+        die(f"вида «{a.kind}» в базе нет",
+            "список: sm.py cases <модель>; завести: sm.py learn <модель> --kind … --case …")
+    print(f"{hit['kind']} — {len(hit['cases'])} корнер-кейсов\n")
+    for c in hit["cases"]:
+        own = "  [своё]" if c.get("own") else ""
+        print(f"  {c['case']}{own}")
+        print(f"      {c.get('why','')}")
+    print("\nэто подсказки, а не обязательный список: бери то, что описано в спеке,"
+          "\nа про недостающее спроси пользователя")
+
+
+def cmd_learn(a):
+    """Дописать корнер-кейс в проектную базу знаний."""
+    p = project_kb(a.model)
+    cur = store.load(p) or []
+    entry = next((k for k in cur if k["kind"] == a.kind), None)
+    if entry is None:
+        entry = {"kind": a.kind, "aka": [], "cases": []}
+        cur.append(entry)
+    if any(c["case"] == a.case for c in entry["cases"]):
+        die(f"кейс «{a.case}» у вида «{a.kind}» уже есть")
+    base = {k["kind"]: k for k in (store.load(BASE_KB) or [])}
+    if a.kind in base and any(c["case"] == a.case for c in base[a.kind]["cases"]):
+        die(f"кейс «{a.case}» уже есть в базовой базе знаний")
+    entry["cases"].append({"case": a.case, "why": a.why or ""})
+    if a.aka:
+        entry["aka"] = sorted(set(entry.get("aka", []) + list(a.aka)))
+    store.save(p, cur)
+    print(f"«{a.kind}» ← «{a.case}»")
+    print(f"  записано в {p}; будет подсказываться в этом проекте впредь")
+
+
 # ---------- модель ----------
 
 def cmd_init(a):
@@ -355,6 +441,13 @@ def main():
     ra.add_argument("--desc"); ra.set_defaults(fn=cmd_rule_add)
     rr = r.add_parser("rm"); rr.add_argument("model"); rr.add_argument("id")
     rr.set_defaults(fn=cmd_rule_rm)
+
+    kc = sub.add_parser("cases"); kc.add_argument("model"); kc.add_argument("--kind")
+    kc.set_defaults(fn=cmd_cases)
+    kl = sub.add_parser("learn"); kl.add_argument("model")
+    kl.add_argument("--kind", required=True); kl.add_argument("--case", required=True)
+    kl.add_argument("--why"); kl.add_argument("--aka", nargs="*")
+    kl.set_defaults(fn=cmd_learn)
 
     rw = sub.add_parser("rows"); rw.add_argument("model")
     rw.add_argument("--no-state", action="store_true", dest="no_state")
