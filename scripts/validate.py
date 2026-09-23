@@ -20,7 +20,14 @@ def resolve(ref_file, source, root):
 
 
 def check_ref(text, source, root):
-    """-> (ok, сообщение). Ссылка обязана указывать на существующее место."""
+    """-> (ok, сообщение).
+
+    Основание — любой непустой текст: раздел спеки, цитата, ссылка на Confluence
+    или Jira, номер задачи. Проверяется только то, что проверяемо: если в тексте
+    есть ссылка на файл репозитория, файл и место в нём обязаны существовать.
+    """
+    if not str(text).strip():
+        return False, "пустое основание"
     m = SECTION.search(str(text))
     if m:
         path = resolve(m.group(1), source, root)
@@ -40,7 +47,7 @@ def check_ref(text, source, root):
         if not (1 <= n <= len(lines)):
             return False, f"{os.path.basename(path)}: строки {n} нет (всего {len(lines)})"
         return True, ""
-    return False, "нет ссылки вида spec.md:§3"
+    return True, ""   # свободная формулировка — проверить нечем, принимаем
 
 
 def check(path, root="."):

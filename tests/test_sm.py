@@ -81,10 +81,16 @@ class T(unittest.TestCase):
     # --- состояния ---
 
 
-    def test_state_requires_real_reference(self):
+    def test_state_accepts_free_form_evidence(self):
+        self.sm("state", "add", self.m, "--name", "S", "--desc", "видно",
+                "--evidence", "раздел «Экраны» в Confluence")
+        self.assertEqual(self.model()["states"][0]["evidence"],
+                         "раздел «Экраны» в Confluence")
+
+    def test_state_broken_file_reference_refused(self):
         out = self.sm("state", "add", self.m, "--name", "S", "--desc", "видно",
-                      "--evidence", "просто так", expect=2)
-        self.assertIn("не подтверждается", out)
+                      "--evidence", "spec.md:§99", expect=2)
+        self.assertIn("выдумана", out)
 
     def test_state_requires_desc(self):
         out = self.sm("state", "add", self.m, "--name", "S",
@@ -104,11 +110,17 @@ class T(unittest.TestCase):
     # --- правила и матрица ---
 
 
-    def test_rule_requires_real_reference(self):
+    def test_rule_accepts_free_form_evidence(self):
+        self.add()
+        self.sm("rule", "add", self.m, "--id", "r1", "--forbid", "cart=a",
+                "--evidence", "CHK-42, комментарий аналитика")
+        self.assertEqual(len(self.model()["constraints"]), 1)
+
+    def test_rule_broken_file_reference_refused(self):
         self.add()
         out = self.sm("rule", "add", self.m, "--id", "r1", "--forbid", "cart=a",
-                      "--evidence", "потому что", expect=2)
-        self.assertIn("не подтверждается", out)
+                      "--evidence", "spec.md:§99", expect=2)
+        self.assertIn("выдумана", out)
 
     def test_build_refuses_without_params(self):
         out = self.sm("build", self.m, expect=2)

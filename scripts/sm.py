@@ -55,6 +55,13 @@ def ref_ok(text, model_path, root):
     return validate.check_ref(text, store.load(model_path).get("source", ""), root)
 
 
+def ref_hint(why):
+    """Подсказка по существу ошибки, а не одна на все случаи."""
+    if "пустое" in why:
+        return "откуда это взято: раздел спеки, цитата, ссылка, номер задачи"
+    return "сослался на файл репозитория — место в нём должно существовать"
+
+
 # ---------- база знаний ----------
 
 BASE_KB = os.path.join(ROOT, "knowledge", "base.json")
@@ -160,15 +167,15 @@ def cmd_param_add(a):
     if not a.desc:
         die("не указан --desc", "что это за вход — одной фразой")
     if not a.frm:
-        die("не указан --from", "ссылка на место в спеке: docs/spec.md:§3")
+        die("не указан --from",
+            "откуда параметр: раздел спеки, цитата, ссылка, номер задачи")
     if not a.all_values:
         die("не указаны --all-values",
             "перечисли ВСЕ значения из спеки, включая корнер-кейсы")
     m = load(a.model)
     ok, why = ref_ok(a.frm, a.model, a.root)
     if not ok:
-        die(f"--from не подтверждается: {why}",
-            "ссылка должна указывать на существующий раздел спеки")
+        die(f"--from не подтверждается: {why}", ref_hint(why))
     values = a.values or list(a.all_values)
     extra = [v for v in a.all_values if v not in values]
     if extra and not a.grouping:
@@ -234,11 +241,11 @@ def cmd_state_add(a):
     if not a.desc:
         die("нет --desc", "что пользователь видит в этом состоянии")
     if not a.evidence:
-        die("нет --evidence", "ссылка на место в спеке: docs/spec.md:§3")
+        die("нет --evidence",
+            "откуда состояние: раздел спеки, цитата, ссылка, номер задачи")
     ok, why = ref_ok(a.evidence, a.model, a.root)
     if not ok:
-        die(f"--evidence не подтверждается: {why}",
-            "состояния без ссылки не бывает; нет в спеке — спроси пользователя")
+        die(f"--evidence не подтверждается: {why}", ref_hint(why))
     if any(s["name"] == a.name for s in (m.get("states") or [])):
         die(f"состояние «{a.name}» уже есть")
     m.setdefault("states", []).append(
@@ -296,9 +303,7 @@ def cmd_rule_add(a):
         die("нет --evidence", "правило без основания не принимается")
     ok, why = ref_ok(a.evidence, a.model, a.root)
     if not ok:
-        die(f"--evidence не подтверждается: {why}",
-            "правило берётся только из спеки. Нет в спеке — спроси пользователя "
-            "и попроси показать место, откуда это следует")
+        die(f"--evidence не подтверждается: {why}", ref_hint(why))
     r = {"id": a.id, "evidence": a.evidence}
     if a.desc:
         r["desc"] = a.desc

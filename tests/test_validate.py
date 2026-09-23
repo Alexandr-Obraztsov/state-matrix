@@ -62,9 +62,22 @@ class T(unittest.TestCase):
         e, w = self.check({"x": param(**{"from": "nowhere.md:§1"})})
         self.assertTrue(any("нет файла" in z for z in e), e)
 
-    def test_reference_without_anchor_caught(self):
-        e, w = self.check({"x": param(**{"from": "просто текст"})})
-        self.assertTrue(any("нет ссылки" in z for z in e), e)
+    def test_free_form_evidence_accepted(self):
+        """Спека может жить в Confluence или Jira — проверить нечем, принимаем."""
+        for text in ("раздел «Лимиты» во внутренней вики",
+                     "https://jira.example.com/browse/CHK-42",
+                     "устно подтверждено аналитиком 2026-09-20"):
+            e, w = self.check({"x": param(**{"from": text})})
+            self.assertEqual(e, [], f"{text}: {e}")
+
+    def test_empty_evidence_rejected(self):
+        e, w = self.check({"x": param(**{"from": "   "})})
+        self.assertTrue(any("from" in z or "пустое" in z for z in e), e)
+
+    def test_broken_file_reference_still_caught(self):
+        """Сослался на файл репозитория — место в нём обязано существовать."""
+        e, w = self.check({"x": param(**{"from": "spec.md:§99"})})
+        self.assertTrue(any("выдумана" in z for z in e), e)
 
     def test_state_without_evidence(self):
         s = state(); del s["evidence"]
