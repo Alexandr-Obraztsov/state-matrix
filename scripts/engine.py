@@ -104,17 +104,6 @@ def build(model):
                       "в одном документе, предложи разбиение"]
         findings.append({"class": "CEILING", "severity": "block",
                          "message": "\n".join(lines)})
-    for i in range(len(irrel)):
-        for j in range(i + 1, len(irrel)):
-            a, b = irrel[i], irrel[j]
-            if not (a.get("when") and b.get("when")):
-                continue
-            n = sum(1 for r in valid if matches(r, a["when"]) and matches(r, b["when"]))
-            if n:
-                findings.append({
-                    "class": "RULE_OVERLAP", "severity": "block",
-                    "message": f"правила {a.get('id')} и {b.get('id')} применимы "
-                               f"одновременно к {n} комбинациям — порядок не определён"})
     if no_state:
         findings.append({"class": "UNDEFINED", "severity": "warn",
                          "message": f"{len(no_state)} строк без состояния",

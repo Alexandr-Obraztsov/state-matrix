@@ -101,9 +101,3 @@ class Findings(unittest.TestCase):
                                         "evidence": "s.md:§1"}]))
         self.assertFalse([x for x in r["findings"] if x["class"] == "CEILING"])
 
-    def test_rule_overlap_detected(self):
-        r = engine.build(model(
-            {"a": enum("1", "2"), "b": enum("x", "y"), "c": enum("p", "q")},
-            [{"id": "r1", "when": {"a": "1"}, "irrelevant": ["c"], "evidence": "s.md:§1"},
-             {"id": "r2", "when": {"b": "x"}, "irrelevant": ["c"], "evidence": "s.md:§1"}]))
-        self.assertTrue(any(f["class"] == "RULE_OVERLAP" for f in r["findings"]))

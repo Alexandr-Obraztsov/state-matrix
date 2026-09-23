@@ -25,8 +25,8 @@ class T(unittest.TestCase):
 
     def test_skill_mentions_pipeline_order(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"), encoding="utf-8").read()
-        for step in ("sm_init", "sm_param_add", "sm_state_add", "sm_rule_add",
-                     "sm_build", "sm_assign"):
+        for step in ("sm_init", "sm_param_add", "sm_state_add", "sm_build",
+                     "sm_assign", "sm_exclude"):
             self.assertIn(step, s)
 
     def test_skill_states_the_ceiling(self):
@@ -39,11 +39,23 @@ class T(unittest.TestCase):
             self.assertTrue(os.path.exists(p), c)
             self.assertTrue(open(p, encoding="utf-8").read().startswith("---"), c)
 
-    def test_skill_states_the_gates(self):
+    def test_skill_shows_step_indicator(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
                  encoding="utf-8").read()
-        for g in ("Ворота 1", "Ворота 2", "Ворота 3", "Ворота 4"):
+        for g in ("Шаг 1 из 4", "Шаг 2 из 4", "Шаг 3 из 4", "Шаг 4 из 4"):
             self.assertIn(g, s)
+
+    def test_skill_requires_answer_options(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertIn("с вариантами ответа", s)
+        self.assertGreaterEqual(s.count("• "), 6, "нужны примеры вариантов ответа")
+
+    def test_skill_reviews_one_by_one(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertIn("Параметры — по одному", s)
+        self.assertIn("Правила — по одному", s)
 
     def test_skill_forbids_inventing(self):
         s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
@@ -56,8 +68,14 @@ class T(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(R, "scripts", "report_md.py")),
                          "md-отчёта больше нет: всё в чате")
 
+    def test_skill_hides_internals(self):
+        s = open(os.path.join(R, "skills", "state-matrix", "SKILL.md"),
+                 encoding="utf-8").read()
+        self.assertNotIn("RULE_OVERLAP", s)
+        self.assertIn("Не грузи внутренностями", s)
+
     def test_references_exist(self):
-        for f in ("findings.md",):
+        for f in ("parameter-types.md",):
             self.assertTrue(os.path.exists(
                 os.path.join(R, "skills", "state-matrix", "references", f)), f)
 

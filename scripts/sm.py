@@ -277,10 +277,11 @@ def show_result(res):
         print("\nВНЕ МАТРИЦЫ, проверяются по одному:")
         for x in res["specials"]:
             print(f"  {x['param']} = {x['value']}")
-    if res["findings"]:
-        print("\nНАХОДКИ")
-        for f in res["findings"]:
-            print(f"  [{f['severity']}] {f['class']}: {f['message']}")
+    block = [f for f in res["findings"] if f["severity"] == "block"]
+    if block:
+        print()
+        for f in block:
+            print(f["message"])
 
 
 def cmd_build(a):
