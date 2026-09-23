@@ -74,8 +74,12 @@ def project_kb(model):
 
 def knowledge(model):
     """Базовая база знаний плюс проектная. Проектная дополняет, а не заменяет."""
-    base = {k["kind"]: json_copy(k) for k in (store.load(BASE_KB) or [])}
-    for k in (store.load(project_kb(model)) or []):
+    return merge_knowledge(store.load(BASE_KB) or [], store.load(project_kb(model)) or [])
+
+
+def merge_knowledge(base_list, project_list):
+    base = {k["kind"]: json_copy(k) for k in base_list}
+    for k in project_list:
         if k["kind"] in base:
             have = {c["case"] for c in base[k["kind"]]["cases"]}
             for c in k.get("cases") or []:
@@ -118,7 +122,10 @@ def cmd_cases(a):
     if not hit:
         die(f"вида «{a.kind}» в базе нет",
             "список: sm.py cases <модель>; завести: sm.py learn <модель> --kind … --case …")
-    print(f"{hit['kind']} — {len(hit['cases'])} корнер-кейсов\n")
+    print(f"{hit['kind']} — {len(hit['cases'])} корнер-кейсов")
+    if hit.get("desc"):
+        print(f"{hit['desc']}")
+    print()
     for c in hit["cases"]:
         own = "  [своё]" if c.get("own") else ""
         print(f"  {c['case']}{own}")

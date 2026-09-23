@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>База знаний</title>
+<style>
+:root {
+  --paper: #f4f5f0;
+  --paper-2: #eceee7;
+  --ink: #1c2220;
+  --ink-2: #69716c;
+  --rule: #dce0d8;
+  --nav: #1e6a58;
+  --nav-soft: #dfeae4;
+  --marker: #f4da55;
+  --serif: "Charter", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #151917;
+    --paper-2: #1b201d;
+    --ink: #e4e8e4;
+    --ink-2: #8c958f;
+    --rule: #29302c;
+    --nav: #6fc2a8;
+    --nav-soft: #1d2b26;
+    --marker: #5e531c;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+/* клетка тетрадного листа — едва заметная, только в светлой теме */
+@media (prefers-color-scheme: light) {
+  body {
+    background-image:
+      linear-gradient(var(--paper-2) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-2) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--nav); outline-offset: 2px; border-radius: 3px; }
+
+/* ---------- каркас ---------- */
+.shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+aside {
+  position: sticky; top: 0; height: 100vh; overflow: auto;
+  border-right: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 28px 18px 40px 24px;
+}
+main { padding: 44px 48px 96px; }
+.column { max-width: 720px; }
+
+/* ---------- боковая панель ---------- */
+.brand {
+  font-family: var(--serif);
+  font-size: 22px; line-height: 1.2;
+  margin: 0 0 4px;
+}
+.project { color: var(--ink-2); font-size: 13px; margin: 0 0 22px; }
+.search {
+  width: 100%;
+  font: inherit; font-size: 14px;
+  color: var(--ink);
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 8px 11px;
+  margin-bottom: 22px;
+}
+.search::placeholder { color: var(--ink-2); }
+.nav-group { margin-bottom: 22px; }
+.nav-title { font-size: 13px; color: var(--ink-2); margin: 0 0 6px 10px; }
+.nav a {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 15px;
+}
+.nav a:hover { background: var(--paper-2); }
+.nav a[aria-current="page"] { background: var(--nav-soft); color: var(--nav); }
+.nav .count { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.nav a[aria-current="page"] .count { color: var(--nav); }
+.own-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--nav); margin-left: 6px; vertical-align: middle;
+}
+
+/* ---------- заголовки раздела ---------- */
+h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 40px; line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 14px;
+}
+.lede { font-size: 18px; line-height: 1.55; margin: 0 0 14px; max-width: 62ch; }
+.aka { color: var(--ink-2); font-size: 14px; margin: 0 0 36px; }
+.aka span { color: var(--ink); }
+h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 24px; line-height: 1.25;
+  margin: 48px 0 12px;
+}
+
+/* ---------- корнер-кейсы: одна смелая вещь — маркер ---------- */
+.cases { list-style: none; margin: 0; padding: 0; }
+.case { padding: 16px 0 17px; border-top: 1px solid var(--rule); }
+.case:last-child { border-bottom: 1px solid var(--rule); }
+.case-name {
+  font-family: var(--serif);
+  font-size: 19px; line-height: 1.3;
+  margin: 0 0 4px;
+}
+.case-name mark {
+  background: linear-gradient(
+    transparent 12%, var(--marker) 12%, var(--marker) 86%, transparent 86%);
+  color: inherit;
+  padding: 0 0.12em;
+  margin: 0 -0.12em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.case-why { color: var(--ink-2); margin: 0; max-width: 64ch; }
+.own {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--nav);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* ---------- источники ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; }
+.checklist li {
+  display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 4px 24px;
+  padding: 16px 0; border-top: 1px solid var(--rule);
+}
+.checklist li:last-child { border-bottom: 1px solid var(--rule); }
+.src-name { font-family: var(--serif); font-size: 18px; line-height: 1.35; }
+.src-what { margin: 0 0 4px; }
+.src-ask { margin: 0; color: var(--ink-2); font-style: italic; }
+
+.steps { margin: 0 0 24px; padding-left: 1.3em; max-width: 64ch; }
+.steps li { margin: 0 0 6px; padding-left: 4px; }
+
+.trace {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  margin-top: 8px;
+}
+.trace caption {
+  text-align: left; font-family: var(--mono); font-size: 14px;
+  padding-bottom: 10px; color: var(--ink);
+}
+.trace th {
+  text-align: left; font-weight: 500; color: var(--ink-2); font-size: 13px;
+  padding: 0 16px 8px 0; border-bottom: 1px solid var(--rule);
+}
+.trace td { padding: 11px 16px 11px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.trace td:first-child { font-family: var(--mono); font-size: 14px; white-space: nowrap; }
+
+/* ---------- поиск ---------- */
+.result-kind {
+  font-size: 13px; color: var(--ink-2); margin: 0 0 2px;
+}
+.result-kind a { color: var(--nav); text-decoration: none; }
+.result-kind a:hover { text-decoration: underline; }
+.empty { color: var(--ink-2); padding: 24px 0; }
+
+/* ---------- подвал ---------- */
+.footnote {
+  margin-top: 56px; color: var(--ink-2); font-size: 14px; max-width: 64ch;
+}
+.footnote code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+
+/* ---------- узкий экран ---------- */
+@media (max-width: 820px) {
+  .shell { grid-template-columns: 1fr; }
+  aside {
+    position: static; height: auto;
+    border-right: 0; border-bottom: 1px solid var(--rule);
+    padding: 20px 16px 8px;
+  }
+  .nav { display: flex; flex-wrap: wrap; gap: 4px; }
+  .nav a { padding: 5px 10px; background: var(--paper-2); }
+  .nav-title { margin-left: 0; }
+  main { padding: 28px 16px 64px; }
+  h1 { font-size: 32px; }
+  .checklist li { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nav a, .search { transition: background-color .12s ease; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <p class="brand">База знаний</p>
+    <p class="project" id="project">загружаю…</p>
+    <input class="search" id="q" type="search" placeholder="Найти кейс или вид" aria-label="Поиск по базе знаний">
+    <nav class="nav-group" aria-label="Как искать">
+      <p class="nav-title">Как искать</p>
+      <div class="nav"><a href="#sources" data-route="sources">Где искать входы</a></div>
+    </nav>
+    <nav class="nav-group" aria-label="Виды параметров">
+      <p class="nav-title">Виды параметров</p>
+      <div class="nav" id="kinds"></div>
+    </nav>
+  </aside>
+  <main><div class="column" id="view"></div></main>
+</div>
+
+<script>
+let data = null, snapshot = "";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const plural = (n, a, b, c) => { const m = n % 100, d = n % 10; return m >= 11 && m <= 14 ? c : d === 1 ? a : d >= 2 && d <= 4 ? b : c; };
+
+async function load() {
+  try {
+    const r = await fetch("/api/knowledge", { cache: "no-store" });
+    const text = await r.text();
+    if (text === snapshot) return;
+    snapshot = text;
+    data = JSON.parse(text);
+    render();
+  } catch (e) {
+    $("project").textContent = "сервер не отвечает — запусти kb_server.py";
+  }
+}
+
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (h.startsWith("kind/")) return { view: "kind", kind: h.slice(5) };
+  if (h === "sources") return { view: "sources" };
+  return { view: "sources" };
+}
+
+function renderNav(r) {
+  const own = data.kinds.reduce((n, k) => n + k.cases.filter(c => c.own).length, 0);
+  $("project").textContent = own
+    ? `проект ${data.project}, своих кейсов ${own}`
+    : `проект ${data.project}`;
+  $("kinds").innerHTML = data.kinds.map(k => `
+    <a href="#kind/${encodeURIComponent(k.kind)}"
+       ${r.view === "kind" && r.kind === k.kind ? 'aria-current="page"' : ""}>
+      <span>${esc(cap(k.kind))}${k.own ? '<span class="own-dot" title="добавлено в проекте"></span>' : ""}</span>
+      <span class="count">${k.cases.length}</span>
+    </a>`).join("");
+  document.querySelector('[data-route="sources"]')
+    .toggleAttribute("aria-current", r.view === "sources");
+  if (r.view === "sources") document.querySelector('[data-route="sources"]').setAttribute("aria-current", "page");
+}
+
+function caseItem(c, kindLink) {
+  return `<li class="case">
+    ${kindLink ? `<p class="result-kind"><a href="#kind/${encodeURIComponent(kindLink)}">${esc(cap(kindLink))}</a></p>` : ""}
+    <p class="case-name"><mark>${esc(c.case)}</mark>${c.own ? '<span class="own">добавлено в проекте</span>' : ""}</p>
+    ${c.why ? `<p class="case-why">${esc(c.why)}</p>` : ""}
+  </li>`;
+}
+
+function viewKind(name) {
+  const k = data.kinds.find(x => x.kind === name);
+  if (!k) return `<p class="empty">Такого вида в базе нет. Выбери вид слева.</p>`;
+  const aka = (k.aka || []).length
+    ? `<p class="aka">Ещё называют: ${k.aka.map(a => `<span>${esc(a)}</span>`).join(", ")}</p>` : `<div class="aka"></div>`;
+  return `
+    <h1>${esc(cap(k.kind))}</h1>
+    ${k.desc ? `<p class="lede">${esc(k.desc)}</p>` : ""}
+    ${aka}
+    <ul class="cases">${k.cases.map(c => caseItem(c)).join("")}</ul>
+    <p class="footnote">Это подсказки, а не обязательный список: в матрицу идёт то,
+    что подтверждает спека. Недостающий кейс можно дописать —
+    <code>sm_learn(kind="${esc(k.kind)}", case="…", why="…")</code>.</p>`;
+}
+
+function viewSources() {
+  const t = data.trace;
+  const trace = t ? `
+    <h2>${esc(t.title)}</h2>
+    <ol class="steps">${t.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
+    <table class="trace">
+      <caption>${esc(t.example.endpoint)}</caption>
+      <thead><tr><th>уходит в запрос</th><th>откуда берётся</th><th>что может быть разным</th></tr></thead>
+      <tbody>${t.example.rows.map(r => `<tr><td>${esc(r.field)}</td><td>${esc(r.from)}</td><td>${esc(r.varies)}</td></tr>`).join("")}</tbody>
+    </table>` : "";
+  return `
+    <h1>Где искать входы</h1>
+    <p class="lede">Пропущенный вход не попадёт в матрицу, и никакая свёртка это
+    не исправит. Пройди по каждому источнику и спроси: может ли отсюда прийти разное?</p>
+    <div class="aka"></div>
+    <ul class="checklist">${data.sources.map(s => `
+      <li>
+        <div class="src-name">${esc(cap(s.source))}</div>
+        <div>
+          <p class="src-what">${esc(s.what)}</p>
+          <p class="src-ask">${esc(s.ask)}</p>
+        </div>
+      </li>`).join("")}</ul>
+    ${trace}`;
+}
+
+function viewSearch(q) {
+  const needle = q.toLowerCase();
+  const hits = [];
+  for (const k of data.kinds) {
+    // вид целиком попадает в выдачу, только если совпало его имя или синоним —
+    // описание вида не тянет за собой все его кейсы
+    const kindHit = [k.kind, ...(k.aka || [])].some(s => (s || "").toLowerCase().includes(needle));
+    for (const c of k.cases) {
+      if (kindHit || c.case.toLowerCase().includes(needle) || (c.why || "").toLowerCase().includes(needle)) {
+        hits.push({ c, kind: k.kind });
+      }
+    }
+  }
+  const head = `<h1>Поиск</h1>
+    <p class="lede">«${esc(q)}» — ${hits.length} ${plural(hits.length, "кейс", "кейса", "кейсов")}</p><div class="aka"></div>`;
+  if (!hits.length) return head + `<p class="empty">Ничего не нашлось. Попробуй другое слово или открой вид слева.</p>`;
+  return head + `<ul class="cases">${hits.map(h => caseItem(h.c, h.kind)).join("")}</ul>`;
+}
+
+function render() {
+  if (!data) return;
+  const r = route();
+  renderNav(r);
+  const q = $("q").value.trim();
+  $("view").innerHTML = q ? viewSearch(q) : r.view === "kind" ? viewKind(r.kind) : viewSources();
+  const title = q ? "Поиск" : r.view === "kind" ? cap(r.kind) : "Где искать входы";
+  document.title = `${title} — база знаний`;
+}
+
+addEventListener("hashchange", () => { $("q").value = ""; render(); scrollTo(0, 0); });
+$("q").addEventListener("input", () => { render(); scrollTo(0, 0); });
+addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== $("q")) { e.preventDefault(); $("q").focus(); }
+  if (e.key === "Escape" && document.activeElement === $("q")) { $("q").value = ""; render(); $("q").blur(); }
+});
+addEventListener("focus", load);
+setInterval(load, 4000);
+load();
+</script>
+</body>
+</html>
